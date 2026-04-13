@@ -3,100 +3,107 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ANALYTICS DASHBOARD - WHM PRO</title>
+    <title>WHM PRO - ADVANCED ANALYTICS</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f8fafc; color: #334155; }
-        .card-shadow { box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03); }
-        /* Tùy chỉnh thanh cuộn cho bảng */
+        body { font-family: 'Inter', sans-serif; background-color: #f4f7f6; color: #1e293b; }
+        .da-card { background: white; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.04); border: 1px solid #e2e8f0; }
+        input:focus, select:focus { outline: none; ring: 2px; ring-color: #4f46e5; border-color: #4f46e5; }
+        /* Tùy chỉnh thanh cuộn */
         ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: #f1f5f9; rounded: 8px; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 8px; }
-        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
     </style>
 </head>
 <body class="min-h-screen flex flex-col">
 
-    <header class="bg-white border-b border-slate-200 px-8 py-4 flex justify-between items-center sticky top-0 z-50">
+    <header class="bg-white border-b border-slate-200 px-6 py-3 flex justify-between items-center sticky top-0 z-50">
         <div class="flex items-center gap-3">
-            <div class="bg-indigo-600 text-white p-2 rounded-lg">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
-            </div>
+            <div class="bg-blue-700 text-white p-2 rounded-lg font-bold text-sm">WHM</div>
             <div>
-                <h1 class="text-xl font-extrabold text-slate-800 tracking-tight">WHM PRO ENTERPRISE</h1>
-                <p class="text-[11px] font-bold text-indigo-500 uppercase tracking-wider">BY VINH | System Analytics</p>
+                <h1 class="text-lg font-extrabold text-slate-800 tracking-tight">WHM PRO ENTERPRISE By Vinh</h1>
+                <p class="text-[10px] font-bold text-blue-600 uppercase tracking-widest">Inventory & Fulfillment Analytics</p>
             </div>
         </div>
-        <div class="text-right">
-            <p id="real-time-date" class="text-sm font-bold text-slate-600"></p>
-            <p id="real-time-clock" class="text-xs text-slate-400 mt-0.5"></p>
+        <div class="text-right hidden sm:block">
+            <p id="real-time-date" class="text-sm font-bold text-slate-700"></p>
+            <p id="real-time-clock" class="text-xs text-slate-500"></p>
         </div>
     </header>
 
-    <main class="flex-1 p-8 overflow-y-auto">
-        <div class="flex justify-between items-end mb-6">
-            <div>
-                <h2 class="text-2xl font-bold text-slate-800">Tổng quan kế hoạch xuất Cont</h2>
-                <p class="text-sm text-slate-500 mt-1">Dữ liệu được đồng bộ trực tiếp từ hệ thống Cloud WHM by Vinh.</p>
+    <main class="flex-1 p-6 overflow-y-auto">
+        
+        <div class="da-card p-4 mb-6 flex flex-wrap gap-4 items-end justify-between bg-white">
+            <div class="flex flex-wrap gap-4 flex-1">
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1">🔍 Tìm Mã Hàng (Smart Search)</label>
+                    <input type="text" id="filter-sku" onkeyup="applyFilters()" placeholder="VD: 8363..." class="w-48 px-3 py-2 border border-slate-300 rounded-lg text-sm bg-slate-50 focus:bg-white transition-colors">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1">🏢 Khách Hàng</label>
+                    <select id="filter-cus" onchange="applyFilters()" class="w-40 px-3 py-2 border border-slate-300 rounded-lg text-sm bg-slate-50 focus:bg-white">
+                        <option value="ALL">Tất cả</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1">📅 Ngày xuất dự kiến (CRD)</label>
+                    <select id="filter-crd" onchange="applyFilters()" class="w-40 px-3 py-2 border border-slate-300 rounded-lg text-sm bg-slate-50 focus:bg-white">
+                        <option value="ALL">Tất cả</option>
+                    </select>
+                </div>
             </div>
-            <button onclick="fetchData()" class="bg-white border border-slate-200 text-slate-600 px-4 py-2 rounded-lg font-bold text-sm hover:bg-slate-50 hover:text-indigo-600 transition-all shadow-sm flex items-center gap-2">
-                <span id="sync-status">🔄 Làm mới dữ liệu</span>
+            <button onclick="fetchData()" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg font-bold text-sm shadow-sm transition-all flex items-center gap-2">
+                <span id="sync-status">🔄 Đồng bộ Cloud</span>
             </button>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <div class="bg-white p-6 rounded-2xl card-shadow border border-slate-100 border-t-4 border-t-indigo-500">
-                <p class="text-slate-500 text-xs font-bold uppercase tracking-wide">Tổng Sản Phẩm (QTY)</p>
-                <h3 id="kpi-qty" class="text-3xl font-black text-slate-800 mt-2">0</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <div class="da-card p-5 border-l-4 border-blue-600">
+                <p class="text-slate-500 text-xs font-bold uppercase">Tổng Số Lượng Yêu Cầu Xuất</p>
+                <h3 id="kpi-target" class="text-3xl font-black text-slate-800 mt-1">0</h3>
             </div>
-            <div class="bg-white p-6 rounded-2xl card-shadow border border-slate-100 border-t-4 border-t-emerald-500">
-                <p class="text-slate-500 text-xs font-bold uppercase tracking-wide">Tổng Kiện Quy Đổi</p>
-                <h3 id="kpi-pkgs" class="text-3xl font-black text-emerald-600 mt-2">0 <span class="text-sm text-slate-400 font-medium">kiện</span></h3>
+            <div class="da-card p-5 border-l-4 border-emerald-500">
+                <p class="text-slate-500 text-xs font-bold uppercase">Tổng Tồn Kho (thành phẩm + Sản xuất)</p>
+                <h3 id="kpi-actual" class="text-3xl font-black text-emerald-600 mt-1">0</h3>
             </div>
-            <div class="bg-white p-6 rounded-2xl card-shadow border border-slate-100 border-t-4 border-t-amber-500">
-                <p class="text-slate-500 text-xs font-bold uppercase tracking-wide">Tổng Trọng Lượng</p>
-                <h3 id="kpi-weight" class="text-3xl font-black text-slate-800 mt-2">0 <span class="text-sm text-slate-400 font-medium">kg</span></h3>
+            <div class="da-card p-5 border-l-4 border-amber-500">
+                <p class="text-slate-500 text-xs font-bold uppercase">Tỷ lệ đáp ứng (Fulfillment)</p>
+                <h3 id="kpi-rate" class="text-3xl font-black text-amber-600 mt-1">0%</h3>
             </div>
-            <div class="bg-white p-6 rounded-2xl card-shadow border border-slate-100 border-t-4 border-t-blue-500">
-                <p class="text-slate-500 text-xs font-bold uppercase tracking-wide">Khách Hàng</p>
-                <h3 id="kpi-cus" class="text-2xl font-bold text-blue-600 mt-2 leading-tight">...</h3>
-            </div>
-        </div>
-
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-            <div class="lg:col-span-2 bg-white p-6 rounded-2xl card-shadow border border-slate-100">
-                <h3 class="font-bold text-slate-800 mb-1">Số lượng kiện xuất theo Container</h3>
-                <p class="text-xs text-slate-400 mb-6">Đã áp dụng công thức quy đổi cặp (Left+Right)</p>
-                <div class="h-64">
-                    <canvas id="contChart"></canvas>
-                </div>
-            </div>
-            <div class="bg-white p-6 rounded-2xl card-shadow border border-slate-100">
-                <h3 class="font-bold text-slate-800 mb-1">Cân bằng LHF / RHF</h3>
-                <p class="text-xs text-slate-400 mb-6">Kiểm soát rủi ro lệch bộ hàng hóa</p>
-                <div class="h-64 relative">
-                    <canvas id="balanceChart"></canvas>
-                </div>
+            <div class="da-card p-5 border-l-4 border-purple-500">
+                <p class="text-slate-500 text-xs font-bold uppercase">Tổng Kiện (Conts)</p>
+                <h3 id="kpi-pkgs" class="text-3xl font-black text-purple-600 mt-1">0</h3>
             </div>
         </div>
 
-        <div class="bg-white rounded-2xl card-shadow border border-slate-100 overflow-hidden">
-            <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
-                <h3 class="font-bold text-slate-800">Chi tiết lệnh xuất (CRD Loading)</h3>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            <div class="da-card p-5">
+                <h3 class="font-bold text-slate-800 text-sm mb-4">Tồn Kho vs Yêu Cầu theo Model (Top 5)</h3>
+                <div class="h-56"><canvas id="fulfillmentChart"></canvas></div>
+            </div>
+            <div class="da-card p-5">
+                <h3 class="font-bold text-slate-800 text-sm mb-4">Phân bổ khối lượng xuất theo Cont</h3>
+                <div class="h-56"><canvas id="contChart"></canvas></div>
+            </div>
+        </div>
+
+        <div class="da-card overflow-hidden flex flex-col">
+            <div class="bg-slate-800 px-5 py-3 flex justify-between items-center text-white">
+                <h3 class="font-bold text-sm tracking-wide">CHI TIẾT MÃ HÀNG & NHẬP LIỆU TỒN KHO</h3>
+                <span class="text-xs bg-slate-700 px-2 py-1 rounded">Dữ liệu đã được liên kết trực tiếp</span>
             </div>
             <div class="overflow-x-auto">
-                <table class="w-full text-left whitespace-nowrap">
-                    <thead class="bg-slate-50 border-b border-slate-200">
+                <table class="w-full text-left whitespace-nowrap text-sm">
+                    <thead class="bg-slate-50 border-b border-slate-200 text-slate-500">
                         <tr>
-                            <th class="px-6 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider">Cus. (Khách hàng)</th>
-                            <th class="px-6 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider">Mô tả mã hàng (Item Desc)</th>
-                            <th class="px-6 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider text-center">QTY (Trái | Phải)</th>
-                            <th class="px-6 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider text-center">Pcs/PKG</th>
-                            <th class="px-6 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider text-center">Unit Weight</th>
-                            <th class="px-6 py-3 text-xs font-bold text-emerald-600 uppercase tracking-wider text-center">No of PKG (Kiện)</th>
-                            <th class="px-6 py-3 text-xs font-bold text-indigo-500 uppercase tracking-wider text-center">CRD</th>
+                            <th class="px-5 py-3 font-bold">KHÁCH HÀNG / CONT</th>
+                            <th class="px-5 py-3 font-bold">MÃ HÀNG (DESC)</th>
+                            <th class="px-5 py-3 font-bold text-center">SỐ LƯỢNG YÊU CẦU</th>
+                            <th class="px-5 py-3 font-bold text-center text-blue-600">TỒN KHO THÀNH PHẨM</th>
+                            <th class="px-5 py-3 font-bold text-center text-emerald-600">TỒN KHO SẢN XUẤT</th>
+                            <th class="px-5 py-3 font-bold text-center">THAO TÁC</th>
                         </tr>
                     </thead>
                     <tbody id="table-body" class="divide-y divide-slate-100">
@@ -107,182 +114,194 @@
     </main>
 
     <script>
-        // ----------------------------------------------------
-        // 1. CHỖ NÀY ANH DÁN LINK APPS SCRIPT (doGet) CỦA ANH VÀO
-        // ----------------------------------------------------
-        const CLOUD_API = 'https://script.google.com/macros/s/AKfycbwIIUcfeJ06Fhb-m4Pd6B4LW2jNCYccprqO58r-QK27yvHN1-vYZ-4gf-X3XJFcGFzk3Q/exec'; 
+        // --- CẤU HÌNH API ---
+        const CLOUD_API = 'https://script.google.com/macros/s/AKfycbzMe9IslcFXE1TFrWHICVFabqRvlgHyhqBcQ8mtNHKefkrqbOaQyNud_lw-803y_Q5iIQ/exec'; 
         
-        // Dữ liệu mẫu khởi tạo để UI hiển thị đẹp lúc chưa kết nối API
-        const mockData = [
-            { cus: "Best Home", desc: "8363 Recliner LHF", qty: 70, unitWeight: 5.1, pcsPerPkg: 70, crd: "25/04/2026" },
-            { cus: "Best Home", desc: "8363 Recliner RHF", qty: 70, unitWeight: 5.1, pcsPerPkg: 70, crd: "25/04/2026" },
-            { cus: "Best Home", desc: "8333 Recliner LHF", qty: 448, unitWeight: 5.41, pcsPerPkg: 56, crd: "25/04/2026" },
-            { cus: "Best Home", desc: "8333 Recliner RHF", qty: 448, unitWeight: 5.41, pcsPerPkg: 56, crd: "25/04/2026" },
-            { cus: "IKEA", desc: "5633 Recliner LHF", qty: 52, unitWeight: 6.34, pcsPerPkg: 52, crd: "26/04/2026" },
-            { cus: "IKEA", desc: "5633 Recliner RHF", qty: 52, unitWeight: 6.34, pcsPerPkg: 52, crd: "26/04/2026" }
-        ];
+        let globalData = []; // Lưu trữ data gốc để filter
+        let fulfillmentChartInst = null;
+        let contChartInst = null;
 
-        let contChartInstance = null;
-        let balanceChartInstance = null;
-
-        // Cập nhật đồng hồ thời gian thực
-        function updateClock() {
+        // Đồng hồ
+        setInterval(() => {
             const now = new Date();
             document.getElementById('real-time-date').innerText = now.toLocaleDateString('vi-VN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
             document.getElementById('real-time-clock').innerText = now.toLocaleTimeString('vi-VN');
+        }, 1000);
+
+        // Gọi dữ liệu
+        async function fetchData() {
+            const btn = document.getElementById('sync-status');
+            if(!CLOUD_API.includes('script.google.com')) { alert("Anh Vinh chưa dán link API mới vào code HTML kìa!"); return; }
+            
+            btn.innerText = "⏳ Đang tải...";
+            try {
+                const res = await fetch(CLOUD_API);
+                globalData = await res.json();
+                populateDropdowns();
+                applyFilters();
+                btn.innerText = "✅ Đã đồng bộ";
+                setTimeout(() => btn.innerText = "🔄 Đồng bộ Cloud", 3000);
+            } catch (err) {
+                btn.innerText = "❌ Lỗi mạng";
+                console.error(err);
+            }
         }
-        setInterval(updateClock, 1000);
-        updateClock();
 
-        // Xử lý dữ liệu (Tính toán kiểu Analyst)
-        function processData(data) {
-            // Nhóm dữ liệu theo gốc của Item (Bỏ chữ LHF/RHF để gom cặp)
-            const grouped = {};
-            let totalQty = 0; let totalWeight = 0; let totalPkgs = 0;
-            let sumLHF = 0; let sumRHF = 0;
-            const customers = new Set();
-            const contData = {};
+        // Đổ data vào Dropdown
+        function populateDropdowns() {
+            const cusSet = new Set(), crdSet = new Set();
+            globalData.forEach(d => { if(d.cus) cusSet.add(d.cus); if(d.crd) crdSet.add(d.crd); });
+            
+            const cusSelect = document.getElementById('filter-cus');
+            cusSelect.innerHTML = '<option value="ALL">Tất cả</option>' + Array.from(cusSet).map(c => `<option value="${c}">${c}</option>`).join('');
+            
+            const crdSelect = document.getElementById('filter-crd');
+            crdSelect.innerHTML = '<option value="ALL">Tất cả</option>' + Array.from(crdSet).map(c => `<option value="${c}">${c}</option>`).join('');
+        }
 
-            data.forEach(item => {
-                totalQty += Number(item.qty);
-                customers.add(item.cus);
-                
-                if(item.desc.includes("LHF")) sumLHF += Number(item.qty);
-                if(item.desc.includes("RHF")) sumRHF += Number(item.qty);
+        // Lọc và Render
+        function applyFilters() {
+            const searchVal = document.getElementById('filter-sku').value.toLowerCase();
+            const cusVal = document.getElementById('filter-cus').value;
+            const crdVal = document.getElementById('filter-crd').value;
 
-                // Gom nhóm để tính kiện
-                let baseName = item.desc.replace("LHF", "").replace("RHF", "").trim();
-                if (!grouped[baseName]) {
-                    grouped[baseName] = { 
-                        cus: item.cus, descL: "", descR: "", qtyL: 0, qtyR: 0, 
-                        pcs: Number(item.pcsPerPkg), weight: Number(item.unitWeight), crd: item.crd 
-                    };
-                }
-                
-                if(item.desc.includes("LHF")) { grouped[baseName].qtyL = Number(item.qty); grouped[baseName].descL = item.desc; }
-                if(item.desc.includes("RHF")) { grouped[baseName].qtyR = Number(item.qty); grouped[baseName].descR = item.desc; }
+            // Lọc Data
+            const filtered = globalData.filter(d => {
+                const matchSearch = d.desc.toLowerCase().includes(searchVal);
+                const matchCus = cusVal === "ALL" || d.cus === cusVal;
+                const matchCrd = crdVal === "ALL" || d.crd == crdVal;
+                return matchSearch && matchCus && matchCrd;
             });
+
+            renderDashboard(filtered);
+        }
+
+        // Tính toán & Hiển thị
+        function renderDashboard(data) {
+            let targetQty = 0, actualQty = 0, totalPkgs = 0;
+            const contMap = {}; const modelMap = {};
 
             const tbody = document.getElementById('table-body');
             tbody.innerHTML = '';
 
-            // Tính số kiện & Render bảng
-            for (const [base, g] of Object.entries(grouped)) {
-                // Áp dụng công thức quy đổi của anh Vinh: ((QtyL + QtyR) / 2) / PcsPerPkg
-                let pkgs = ((g.qtyL + g.qtyR) / 2) / g.pcs;
-                if(isNaN(pkgs) || !isFinite(pkgs)) pkgs = 0;
-                
-                totalPkgs += pkgs;
-                totalWeight += ((g.qtyL + g.qtyR) * g.weight);
+            data.forEach((d, index) => {
+                // Tính KPI
+                targetQty += d.qty;
+                const rowTotalInv = d.invShelf + d.invPending;
+                actualQty += rowTotalInv;
+                totalPkgs += (d.qty / 2) / (d.pcsPerPkg || 1); // Logic gộp trái phải tạm tính trung bình
 
-                // Gom data cho biểu đồ Cột (Tính tổng kiện theo Khách hàng)
-                if(!contData[g.cus]) contData[g.cus] = 0;
-                contData[g.cus] += pkgs;
+                // Map cho Chart Cont
+                const contKey = d.cont || "Khác";
+                contMap[contKey] = (contMap[contKey] || 0) + ((d.qty / 2) / (d.pcsPerPkg || 1));
 
+                // Map cho Chart Fulfillment (Gom theo số model 4 chữ số)
+                const modelMatch = d.desc.match(/\d{4}/);
+                const model = modelMatch ? modelMatch[0] : "Khác";
+                if(!modelMap[model]) modelMap[model] = { target: 0, actual: 0 };
+                modelMap[model].target += d.qty;
+                modelMap[model].actual += rowTotalInv;
+
+                // Tình trạng thiếu đủ
+                const shortage = d.qty - rowTotalInv;
+                const statusColor = shortage <= 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700';
+
+                // Render Table (Có ô input cho cột R)
                 tbody.innerHTML += `
-                    <tr class="hover:bg-slate-50/80 transition-colors">
-                        <td class="px-6 py-4">
-                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700">${g.cus}</span>
+                    <tr class="hover:bg-slate-50 transition-colors border-b border-slate-50">
+                        <td class="px-5 py-3">
+                            <div class="font-bold text-slate-700">${d.cus}</div>
+                            <div class="text-[10px] text-slate-400 bg-slate-200 inline-block px-1 rounded mt-1">${d.cont}</div>
                         </td>
-                        <td class="px-6 py-4">
-                            <p class="text-sm font-bold text-slate-800">${g.descL || base + ' LHF'}</p>
-                            <p class="text-xs text-slate-400">${g.descR || base + ' RHF'}</p>
+                        <td class="px-5 py-3 font-bold text-slate-800">${d.desc}</td>
+                        <td class="px-5 py-3 text-center font-bold text-slate-600">${d.qty}</td>
+                        <td class="px-5 py-3 text-center font-bold text-blue-600">${d.invShelf}</td>
+                        <td class="px-5 py-3 text-center">
+                            <input type="number" id="input-r-${d.rowIndex}" value="${d.invPending}" class="w-20 text-center border border-emerald-300 bg-emerald-50 rounded py-1 font-bold text-emerald-700 focus:ring-emerald-500">
                         </td>
-                        <td class="px-6 py-4 text-center font-mono text-sm">
-                            <span class="text-indigo-600 font-bold">${g.qtyL}</span> <span class="text-slate-300">|</span> <span class="text-emerald-600 font-bold">${g.qtyR}</span>
+                        <td class="px-5 py-3 text-center">
+                            <button onclick="updateInventory(${d.rowIndex})" id="btn-${d.rowIndex}" class="bg-slate-800 hover:bg-slate-700 text-white text-xs px-3 py-1.5 rounded shadow transition-all">Lưu KQ</button>
                         </td>
-                        <td class="px-6 py-4 text-center text-sm font-medium text-slate-600">${g.pcs}</td>
-                        <td class="px-6 py-4 text-center text-sm font-medium text-slate-600">${g.weight}</td>
-                        <td class="px-6 py-4 text-center">
-                            <span class="text-lg font-black text-emerald-500">${pkgs.toFixed(1)}</span>
-                        </td>
-                        <td class="px-6 py-4 text-center text-sm font-bold text-slate-600">${g.crd}</td>
                     </tr>
                 `;
-            }
-
-            // Cập nhật KPI
-            document.getElementById('kpi-qty').innerText = totalQty.toLocaleString();
-            document.getElementById('kpi-pkgs').innerHTML = `${totalPkgs.toFixed(1)} <span class="text-sm text-slate-400 font-medium">kiện</span>`;
-            document.getElementById('kpi-weight').innerHTML = `${totalWeight.toLocaleString()} <span class="text-sm text-slate-400 font-medium">kg</span>`;
-            document.getElementById('kpi-cus').innerText = Array.from(customers).join(", ") || "N/A";
-
-            updateCharts(contData, sumLHF, sumRHF);
-        }
-
-        // Vẽ biểu đồ
-        function updateCharts(contData, sumLHF, sumRHF) {
-            Chart.defaults.font.family = "'Plus Jakarta Sans', sans-serif";
-            
-            // Hủy chart cũ nếu update lại data
-            if(contChartInstance) contChartInstance.destroy();
-            if(balanceChartInstance) balanceChartInstance.destroy();
-
-            // Bar Chart
-            const ctxCont = document.getElementById('contChart').getContext('2d');
-            contChartInstance = new Chart(ctxCont, {
-                type: 'bar',
-                data: {
-                    labels: Object.keys(contData),
-                    datasets: [{
-                        label: 'Số kiện quy đổi',
-                        data: Object.values(contData),
-                        backgroundColor: '#4f46e5',
-                        borderRadius: 6
-                    }]
-                },
-                options: {
-                    responsive: true, maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: {
-                        y: { beginAtZero: true, grid: { borderDash: [4, 4], color: '#f1f5f9' } },
-                        x: { grid: { display: false } }
-                    }
-                }
             });
 
-            // Doughnut Chart
-            const ctxBal = document.getElementById('balanceChart').getContext('2d');
-            balanceChartInstance = new Chart(ctxBal, {
-                type: 'doughnut',
-                data: {
-                    labels: ['Hàng Trái (LHF)', 'Hàng Phải (RHF)'],
-                    datasets: [{
-                        data: [sumLHF, sumRHF],
-                        backgroundColor: ['#6366f1', '#10b981'],
-                        borderWidth: 0, hoverOffset: 4
-                    }]
-                },
-                options: {
-                    responsive: true, maintainAspectRatio: false,
-                    cutout: '75%',
-                    plugins: { legend: { position: 'bottom' } }
-                }
-            });
+            // Update KPI UI
+            document.getElementById('kpi-target').innerText = targetQty.toLocaleString();
+            document.getElementById('kpi-actual').innerText = actualQty.toLocaleString();
+            document.getElementById('kpi-rate').innerText = targetQty === 0 ? "0%" : Math.round((actualQty / targetQty) * 100) + "%";
+            document.getElementById('kpi-pkgs').innerText = totalPkgs.toFixed(1);
+
+            drawCharts(modelMap, contMap);
         }
 
-        // Fetch Data từ Google Script
-        async function fetchData() {
-            const btnText = document.getElementById('sync-status');
-            
-            if(!CLOUD_API) {
-                // Nếu chưa có link API, chạy bằng Mock Data để anh xem giao diện
-                processData(mockData);
-                return;
-            }
+        // Hàm Đẩy dữ liệu lên Google Sheet (Ghi vào Cột R)
+        async function updateInventory(rowIndex) {
+            const inputEle = document.getElementById(`input-r-${rowIndex}`);
+            const btnEle = document.getElementById(`btn-${rowIndex}`);
+            const newVal = Number(inputEle.value);
+
+            btnEle.innerText = "⏳...";
+            btnEle.disabled = true;
 
             try {
-                btnText.innerText = "⏳ Đang tải...";
-                const res = await fetch(CLOUD_API);
-                const data = await res.json();
-                processData(data);
-                btnText.innerText = "✅ Cập nhật xong!";
-                setTimeout(() => btnText.innerText = "🔄 Làm mới dữ liệu", 3000);
+                const res = await fetch(CLOUD_API, {
+                    method: 'POST',
+                    body: JSON.stringify({ rowIndex: rowIndex, newValue: newVal })
+                });
+                const result = await res.json();
+                
+                if(result.status === "success") {
+                    btnEle.innerText = "✅ Đã lưu";
+                    btnEle.classList.replace('bg-slate-800', 'bg-emerald-500');
+                    // Cập nhật lại data global để KPI tự nhảy
+                    const dataRow = globalData.find(d => d.rowIndex === rowIndex);
+                    if(dataRow) dataRow.invPending = newVal;
+                    setTimeout(() => applyFilters(), 1000); // Tự động render lại UI sau 1 giây
+                } else {
+                    btnEle.innerText = "❌ Lỗi";
+                }
             } catch (err) {
                 console.error(err);
-                btnText.innerText = "❌ Lỗi kết nối";
-                setTimeout(() => btnText.innerText = "🔄 Làm mới dữ liệu", 3000);
+                btnEle.innerText = "❌ Lỗi mạng";
             }
+            setTimeout(() => {
+                btnEle.innerText = "Lưu KQ";
+                btnEle.disabled = false;
+                btnEle.classList.replace('bg-emerald-500', 'bg-slate-800');
+            }, 3000);
+        }
+
+        function drawCharts(modelMap, contMap) {
+            Chart.defaults.font.family = "'Inter', sans-serif";
+            if(fulfillmentChartInst) fulfillmentChartInst.destroy();
+            if(contChartInst) contChartInst.destroy();
+
+            // Lấy Top 5 Model
+            const models = Object.keys(modelMap).slice(0, 5);
+            const targets = models.map(m => modelMap[m].target);
+            const actuals = models.map(m => modelMap[m].actual);
+
+            fulfillmentChartInst = new Chart(document.getElementById('fulfillmentChart'), {
+                type: 'bar',
+                data: {
+                    labels: models,
+                    datasets: [
+                        { label: 'Yêu cầu', data: targets, backgroundColor: '#e2e8f0', borderRadius: 4 },
+                        { label: 'Tồn kho thực', data: actuals, backgroundColor: '#10b981', borderRadius: 4 }
+                    ]
+                },
+                options: { responsive: true, maintainAspectRatio: false, scales: { x: { grid: {display: false} }, y: { beginAtZero: true, border: {dash: [4,4]} } } }
+            });
+
+            contChartInst = new Chart(document.getElementById('contChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(contMap),
+                    datasets: [{ data: Object.values(contMap), backgroundColor: ['#4f46e5', '#3b82f6', '#0ea5e9', '#06b6d4', '#14b8a6'], borderWidth: 0 }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { legend: { position: 'right' } } }
+            });
         }
 
         // Chạy lần đầu
