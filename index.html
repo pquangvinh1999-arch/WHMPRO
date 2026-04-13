@@ -3,308 +3,279 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WHM PRO - ADVANCED ANALYTICS</title>
+    <title>WHM PRO - ENTERPRISE ANALYTICS</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Inter', sans-serif; background-color: #f4f7f6; color: #1e293b; }
-        .da-card { background: white; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.04); border: 1px solid #e2e8f0; }
-        input:focus, select:focus { outline: none; ring: 2px; ring-color: #4f46e5; border-color: #4f46e5; }
-        /* Tùy chỉnh thanh cuộn */
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: #f1f5f9; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f8fafc; }
+        .da-card { background: white; border-radius: 16px; box-shadow: 0 4px 20px -2px rgba(0,0,0,0.05); border: 1px solid #f1f5f9; }
+        .edit-mode input { border: 2px solid #10b981 !important; background: #ecfdf5 !important; }
+        .loading-shimmer { background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; }
+        @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
     </style>
 </head>
-<body class="min-h-screen flex flex-col">
+<body class="min-h-screen p-4 md:p-6">
 
-    <header class="bg-white border-b border-slate-200 px-6 py-3 flex justify-between items-center sticky top-0 z-50">
-        <div class="flex items-center gap-3">
-            <div class="bg-blue-700 text-white p-2 rounded-lg font-bold text-sm">WHM</div>
-            <div>
-                <h1 class="text-lg font-extrabold text-slate-800 tracking-tight">WHM PRO ENTERPRISE By Vinh</h1>
-                <p class="text-[10px] font-bold text-blue-600 uppercase tracking-widest">Inventory & Fulfillment Analytics</p>
-            </div>
+    <header class="mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+            <h1 class="text-2xl font-extrabold text-slate-900">WHM PRO ENTERPRISE</h1>
+            <p class="text-slate-500 font-medium">Hệ thống phân tích dữ liệu kho & Điều phối hàng</p>
         </div>
-        <div class="text-right hidden sm:block">
-            <p id="real-time-date" class="text-sm font-bold text-slate-700"></p>
-            <p id="real-time-clock" class="text-xs text-slate-500"></p>
+        <div class="flex flex-wrap gap-3">
+            <div class="da-card px-4 py-2 flex items-center gap-2">
+                <span class="text-xs font-bold text-slate-400">📅 Dự kiến xuất:</span>
+                <select id="filter-crd" onchange="applyFilters()" class="text-sm font-bold bg-transparent outline-none"></select>
+            </div>
+            <div class="da-card px-4 py-2 flex items-center gap-2">
+                <span class="text-xs font-bold text-slate-400">👤 KHÁCH HÀNG:</span>
+                <select id="filter-cus" onchange="applyFilters()" class="text-sm font-bold bg-transparent outline-none"></select>
+            </div>
+            <button onclick="fetchData()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-xl font-bold transition-all shadow-lg shadow-indigo-200 flex items-center gap-2">
+                <span id="sync-icon">🔄</span> Đồng bộ Cloud
+            </button>
         </div>
     </header>
 
-    <main class="flex-1 p-6 overflow-y-auto">
-        
-        <div class="da-card p-4 mb-6 flex flex-wrap gap-4 items-end justify-between bg-white">
-            <div class="flex flex-wrap gap-4 flex-1">
-                <div>
-                    <label class="block text-xs font-bold text-slate-500 mb-1">🔍 Tìm Mã Hàng (Smart Search)</label>
-                    <input type="text" id="filter-sku" onkeyup="applyFilters()" placeholder="VD: 8363..." class="w-48 px-3 py-2 border border-slate-300 rounded-lg text-sm bg-slate-50 focus:bg-white transition-colors">
-                </div>
-                <div>
-                    <label class="block text-xs font-bold text-slate-500 mb-1">🏢 Khách Hàng</label>
-                    <select id="filter-cus" onchange="applyFilters()" class="w-40 px-3 py-2 border border-slate-300 rounded-lg text-sm bg-slate-50 focus:bg-white">
-                        <option value="ALL">Tất cả</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-xs font-bold text-slate-500 mb-1">📅 Ngày xuất dự kiến (CRD)</label>
-                    <select id="filter-crd" onchange="applyFilters()" class="w-40 px-3 py-2 border border-slate-300 rounded-lg text-sm bg-slate-50 focus:bg-white">
-                        <option value="ALL">Tất cả</option>
-                    </select>
-                </div>
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        <div class="da-card p-6 bg-gradient-to-br from-indigo-50 to-white border-l-4 border-indigo-500">
+            <p class="text-slate-500 text-[10px] font-bold uppercase tracking-wider">Yêu Cầu (Set)</p>
+            <h3 id="kpi-target" class="text-3xl font-black text-slate-800">0</h3>
+        </div>
+        <div class="da-card p-6 bg-gradient-to-br from-emerald-50 to-white border-l-4 border-emerald-500">
+            <p class="text-slate-500 text-[10px] font-bold uppercase tracking-wider">Tồn kho tổng</p>
+            <h3 id="kpi-actual" class="text-3xl font-black text-emerald-600">0</h3>
+        </div>
+        <div class="da-card p-6 bg-gradient-to-br from-amber-50 to-white border-l-4 border-amber-500">
+            <p class="text-slate-500 text-[10px] font-bold uppercase tracking-wider">Tỷ lệ Fulfillment</p>
+            <h3 id="kpi-rate" class="text-3xl font-black text-amber-600">0%</h3>
+        </div>
+        <div class="da-card p-6 bg-gradient-to-br from-purple-50 to-white border-l-4 border-purple-500">
+            <p class="text-slate-500 text-[10px] font-bold uppercase tracking-wider">Tổng Kiện (Cont)</p>
+            <h3 id="kpi-pkgs" class="text-3xl font-black text-purple-600">0</h3>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+        <div class="da-card p-6 lg:col-span-2">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="font-extrabold text-slate-800">Phân tích tồn kho theo Feature</h3>
+                <input type="text" id="search-sku" onkeyup="applyFilters()" placeholder="Tìm model (VD: 8363)..." class="bg-slate-100 border-none px-4 py-2 rounded-lg text-sm w-48 focus:ring-2 ring-indigo-500">
             </div>
-            <button onclick="fetchData()" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg font-bold text-sm shadow-sm transition-all flex items-center gap-2">
-                <span id="sync-status">🔄 Đồng bộ Cloud</span>
+            <div class="h-64"><canvas id="barChart"></canvas></div>
+        </div>
+        <div class="da-card p-6">
+            <h3 class="font-extrabold text-slate-800 mb-6">Cơ cấu kiện hàng</h3>
+            <div class="h-64"><canvas id="pieChart"></canvas></div>
+        </div>
+    </div>
+
+    <div class="da-card overflow-hidden">
+        <div class="bg-slate-900 px-6 py-4 flex justify-between items-center text-white">
+            <div class="flex items-center gap-4">
+                <h3 class="font-bold text-sm uppercase tracking-widest">Bảng chi tiết điều phối</h3>
+                <button onclick="toggleEditMode()" id="btn-edit-toggle" class="bg-white/10 hover:bg-white/20 px-3 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-2">
+                    ✏️ Chỉnh sửa số lượng
+                </button>
+            </div>
+            <button id="btn-save-all" onclick="saveAllChanges()" class="hidden bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-1.5 rounded-lg text-xs font-black shadow-lg shadow-emerald-200">
+                💾 Lưu tất cả
             </button>
         </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            <div class="da-card p-5 border-l-4 border-blue-600">
-                <p class="text-slate-500 text-xs font-bold uppercase">Tổng Số Lượng Yêu Cầu Xuất</p>
-                <h3 id="kpi-target" class="text-3xl font-black text-slate-800 mt-1">0</h3>
-            </div>
-            <div class="da-card p-5 border-l-4 border-emerald-500">
-                <p class="text-slate-500 text-xs font-bold uppercase">Tổng Tồn Kho (thành phẩm + Sản xuất)</p>
-                <h3 id="kpi-actual" class="text-3xl font-black text-emerald-600 mt-1">0</h3>
-            </div>
-            <div class="da-card p-5 border-l-4 border-amber-500">
-                <p class="text-slate-500 text-xs font-bold uppercase">Tỷ lệ đáp ứng (Fulfillment)</p>
-                <h3 id="kpi-rate" class="text-3xl font-black text-amber-600 mt-1">0%</h3>
-            </div>
-            <div class="da-card p-5 border-l-4 border-purple-500">
-                <p class="text-slate-500 text-xs font-bold uppercase">Tổng Kiện (Conts)</p>
-                <h3 id="kpi-pkgs" class="text-3xl font-black text-purple-600 mt-1">0</h3>
-            </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm border-collapse">
+                <thead class="bg-slate-50 text-slate-400 font-bold uppercase text-[10px] border-b">
+                    <tr>
+                        <th class="px-6 py-4">Khách hàng & Cont</th>
+                        <th class="px-6 py-4">Mã Feature (Set)</th>
+                        <th class="px-6 py-4 text-center">Yêu Cầu</th>
+                        <th class="px-6 py-4 text-center">Quy cách</th>
+                        <th class="px-6 py-4 text-center">Số Kiện</th>
+                        <th class="px-6 py-4 text-center text-indigo-600">Tồn Thành Phẩm</th>
+                        <th class="px-6 py-4 text-center text-emerald-600">Tồn Sản Xuất</th>
+                        <th class="px-6 py-4 text-center">Trình trạng</th>
+                    </tr>
+                </thead>
+                <tbody id="main-table" class="divide-y divide-slate-100"></tbody>
+            </table>
         </div>
-
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-            <div class="da-card p-5">
-                <h3 class="font-bold text-slate-800 text-sm mb-4">Tồn Kho vs Yêu Cầu theo Model (Top 5)</h3>
-                <div class="h-56"><canvas id="fulfillmentChart"></canvas></div>
-            </div>
-            <div class="da-card p-5">
-                <h3 class="font-bold text-slate-800 text-sm mb-4">Phân bổ khối lượng xuất theo Cont</h3>
-                <div class="h-56"><canvas id="contChart"></canvas></div>
-            </div>
-        </div>
-
-        <div class="da-card overflow-hidden flex flex-col">
-            <div class="bg-slate-800 px-5 py-3 flex justify-between items-center text-white">
-                <h3 class="font-bold text-sm tracking-wide">CHI TIẾT MÃ HÀNG & NHẬP LIỆU TỒN KHO</h3>
-                <span class="text-xs bg-slate-700 px-2 py-1 rounded">Dữ liệu đã được liên kết trực tiếp</span>
-            </div>
-            <div class="overflow-x-auto">
-                <table class="w-full text-left whitespace-nowrap text-sm">
-                    <thead class="bg-slate-50 border-b border-slate-200 text-slate-500">
-                        <tr>
-                            <th class="px-5 py-3 font-bold">KHÁCH HÀNG / CONT</th>
-                            <th class="px-5 py-3 font-bold">MÃ HÀNG (DESC)</th>
-                            <th class="px-5 py-3 font-bold text-center">SỐ LƯỢNG YÊU CẦU</th>
-                            <th class="px-5 py-3 font-bold text-center text-blue-600">TỒN KHO THÀNH PHẨM</th>
-                            <th class="px-5 py-3 font-bold text-center text-emerald-600">TỒN KHO SẢN XUẤT</th>
-                            <th class="px-5 py-3 font-bold text-center">THAO TÁC</th>
-                        </tr>
-                    </thead>
-                    <tbody id="table-body" class="divide-y divide-slate-100">
-                        </tbody>
-                </table>
-            </div>
-        </div>
-    </main>
+    </div>
 
     <script>
-        // --- CẤU HÌNH API ---
-        const CLOUD_API = 'https://script.google.com/macros/s/AKfycbzMe9IslcFXE1TFrWHICVFabqRvlgHyhqBcQ8mtNHKefkrqbOaQyNud_lw-803y_Q5iIQ/exec'; 
-        
-        let globalData = []; // Lưu trữ data gốc để filter
-        let fulfillmentChartInst = null;
-        let contChartInst = null;
+        const API = 'https://script.google.com/macros/s/AKfycbzSWdFRmBcrfBmQAMHJNrJNYeMhjKWZLJBHy7IgyNg8ckHsPlqHtcNDvk8W_W8kJzfSgQ/exec';
+        let rawData = [];
+        let groupedData = [];
+        let isEditMode = false;
+        let pendingUpdates = {};
+        let charts = {};
 
-        // Đồng hồ
-        setInterval(() => {
-            const now = new Date();
-            document.getElementById('real-time-date').innerText = now.toLocaleDateString('vi-VN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-            document.getElementById('real-time-clock').innerText = now.toLocaleTimeString('vi-VN');
-        }, 1000);
-
-        // Gọi dữ liệu
         async function fetchData() {
-            const btn = document.getElementById('sync-status');
-            if(!CLOUD_API.includes('script.google.com')) { alert("Anh Vinh chưa dán link API mới vào code HTML kìa!"); return; }
-            
-            btn.innerText = "⏳ Đang tải...";
+            const icon = document.getElementById('sync-icon');
+            icon.classList.add('animate-spin');
             try {
-                const res = await fetch(CLOUD_API);
-                globalData = await res.json();
-                populateDropdowns();
+                const res = await fetch(API);
+                rawData = await res.json();
+                setupDropdowns();
                 applyFilters();
-                btn.innerText = "✅ Đã đồng bộ";
-                setTimeout(() => btn.innerText = "🔄 Đồng bộ Cloud", 3000);
-            } catch (err) {
-                btn.innerText = "❌ Lỗi mạng";
-                console.error(err);
-            }
+                icon.classList.remove('animate-spin');
+            } catch (e) { alert("Lỗi kết nối API!"); }
         }
 
-        // Đổ data vào Dropdown
-        function populateDropdowns() {
-            const cusSet = new Set(), crdSet = new Set();
-            globalData.forEach(d => { if(d.cus) cusSet.add(d.cus); if(d.crd) crdSet.add(d.crd); });
+        function setupDropdowns() {
+            const cus = [...new Set(rawData.map(d => d.cus))];
+            const crd = [...new Set(rawData.map(d => d.crd))];
             
-            const cusSelect = document.getElementById('filter-cus');
-            cusSelect.innerHTML = '<option value="ALL">Tất cả</option>' + Array.from(cusSet).map(c => `<option value="${c}">${c}</option>`).join('');
-            
-            const crdSelect = document.getElementById('filter-crd');
-            crdSelect.innerHTML = '<option value="ALL">Tất cả</option>' + Array.from(crdSet).map(c => `<option value="${c}">${c}</option>`).join('');
+            document.getElementById('filter-cus').innerHTML = '<option value="ALL">TẤT CẢ KH</option>' + cus.map(c => `<option value="${c}">${c}</option>`).join('');
+            document.getElementById('filter-crd').innerHTML = '<option value="ALL">TẤT CẢ NGÀY</option>' + crd.map(c => `<option value="${c}">${c}</option>`).join('');
         }
 
-        // Lọc và Render
         function applyFilters() {
-            const searchVal = document.getElementById('filter-sku').value.toLowerCase();
-            const cusVal = document.getElementById('filter-cus').value;
-            const crdVal = document.getElementById('filter-crd').value;
+            const s = document.getElementById('search-sku').value.toLowerCase();
+            const c = document.getElementById('filter-cus').value;
+            const d = document.getElementById('filter-crd').value;
 
-            // Lọc Data
-            const filtered = globalData.filter(d => {
-                const matchSearch = d.desc.toLowerCase().includes(searchVal);
-                const matchCus = cusVal === "ALL" || d.cus === cusVal;
-                const matchCrd = crdVal === "ALL" || d.crd == crdVal;
-                return matchSearch && matchCus && matchCrd;
+            const filtered = rawData.filter(item => {
+                return (s === "" || item.desc.toLowerCase().includes(s)) &&
+                       (c === "ALL" || item.cus === c) &&
+                       (d === "ALL" || item.crd === d);
             });
 
-            renderDashboard(filtered);
+            processAndRender(filtered);
         }
 
-        // Tính toán & Hiển thị
-        function renderDashboard(data) {
-            let targetQty = 0, actualQty = 0, totalPkgs = 0;
-            const contMap = {}; const modelMap = {};
+        function processAndRender(data) {
+            // Logic Gom Nhóm L/R (Ảnh 3)
+            const map = {};
+            data.forEach(item => {
+                const model = item.desc.match(/\d{4}/)?.[0] || "Khác";
+                const key = `${item.cus}-${item.cont}-${model}`;
+                
+                if(!map[key]) {
+                    map[key] = { ...item, model, totalQty: 0, totalShelf: 0, totalPending: 0, rows: [] };
+                }
+                map[key].totalQty += item.qty;
+                map[key].totalShelf += item.invShelf;
+                map[key].totalPending += item.invPending;
+                map[key].rows.push({ rowIndex: item.rowIndex, side: item.desc.includes("LHF") ? "L" : "R", val: item.invPending });
+            });
 
-            const tbody = document.getElementById('table-body');
-            tbody.innerHTML = '';
+            groupedData = Object.values(map);
+            renderUI();
+        }
 
-            data.forEach((d, index) => {
-                // Tính KPI
-                targetQty += d.qty;
-                const rowTotalInv = d.invShelf + d.invPending;
-                actualQty += rowTotalInv;
-                totalPkgs += (d.qty / 2) / (d.pcsPerPkg || 1); // Logic gộp trái phải tạm tính trung bình
+        function renderUI() {
+            const tbody = document.getElementById('main-table');
+            let tQty = 0, tInv = 0, tPkgs = 0;
+            const cusPkgMap = {};
 
-                // Map cho Chart Cont
-                const contKey = d.cont || "Khác";
-                contMap[contKey] = (contMap[contKey] || 0) + ((d.qty / 2) / (d.pcsPerPkg || 1));
+            tbody.innerHTML = groupedData.map(g => {
+                const totalInv = g.totalShelf + g.totalPending;
+                const pkgs = (g.totalQty / 2) / (g.pcsPerPkg || 1);
+                const rate = Math.round((totalInv / g.totalQty) * 100);
+                
+                tQty += g.totalQty;
+                tInv += totalInv;
+                tPkgs += pkgs;
+                cusPkgMap[g.cus] = (cusPkgMap[g.cus] || 0) + pkgs;
 
-                // Map cho Chart Fulfillment (Gom theo số model 4 chữ số)
-                const modelMatch = d.desc.match(/\d{4}/);
-                const model = modelMatch ? modelMatch[0] : "Khác";
-                if(!modelMap[model]) modelMap[model] = { target: 0, actual: 0 };
-                modelMap[model].target += d.qty;
-                modelMap[model].actual += rowTotalInv;
-
-                // Tình trạng thiếu đủ
-                const shortage = d.qty - rowTotalInv;
-                const statusColor = shortage <= 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700';
-
-                // Render Table (Có ô input cho cột R)
-                tbody.innerHTML += `
-                    <tr class="hover:bg-slate-50 transition-colors border-b border-slate-50">
-                        <td class="px-5 py-3">
-                            <div class="font-bold text-slate-700">${d.cus}</div>
-                            <div class="text-[10px] text-slate-400 bg-slate-200 inline-block px-1 rounded mt-1">${d.cont}</div>
+                return `
+                    <tr class="hover:bg-slate-50 transition-all">
+                        <td class="px-6 py-4">
+                            <div class="font-bold text-slate-800">${g.cus}</div>
+                            <div class="text-[10px] text-slate-400 font-bold uppercase">Cont: ${g.cont}</div>
                         </td>
-                        <td class="px-5 py-3 font-bold text-slate-800">${d.desc}</td>
-                        <td class="px-5 py-3 text-center font-bold text-slate-600">${d.qty}</td>
-                        <td class="px-5 py-3 text-center font-bold text-blue-600">${d.invShelf}</td>
-                        <td class="px-5 py-3 text-center">
-                            <input type="number" id="input-r-${d.rowIndex}" value="${d.invPending}" class="w-20 text-center border border-emerald-300 bg-emerald-50 rounded py-1 font-bold text-emerald-700 focus:ring-emerald-500">
+                        <td class="px-6 py-4 font-extrabold text-indigo-600">${g.model} <span class="text-slate-300 font-normal">Recliner Set</span></td>
+                        <td class="px-6 py-4 text-center font-bold">${g.totalQty}</td>
+                        <td class="px-6 py-4 text-center text-slate-400">${g.pcsPerPkg}/pkg</td>
+                        <td class="px-6 py-4 text-center font-bold text-purple-600">${pkgs.toFixed(1)}</td>
+                        <td class="px-6 py-4 text-center font-bold text-indigo-500">${g.totalShelf}</td>
+                        <td class="px-6 py-4 text-center">
+                            <div class="flex flex-col gap-1">
+                                ${g.rows.map(r => `
+                                    <div class="flex items-center gap-1 justify-center">
+                                        <span class="text-[9px] font-bold text-slate-400">${r.side}:</span>
+                                        <input type="number" value="${r.val}" 
+                                            ${!isEditMode ? 'readonly' : ''}
+                                            onchange="trackChange(${r.rowIndex}, this.value)"
+                                            class="w-14 text-center py-0.5 rounded border-none bg-slate-100 text-xs font-bold focus:ring-2 ring-emerald-500">
+                                    </div>
+                                `).join('')}
+                            </div>
                         </td>
-                        <td class="px-5 py-3 text-center">
-                            <button onclick="updateInventory(${d.rowIndex})" id="btn-${d.rowIndex}" class="bg-slate-800 hover:bg-slate-700 text-white text-xs px-3 py-1.5 rounded shadow transition-all">Lưu KQ</button>
+                        <td class="px-6 py-4 text-center">
+                            <span class="px-2 py-1 rounded-full text-[10px] font-black ${rate >= 100 ? 'bg-emerald-100 text-emerald-600' : 'bg-amber-100 text-amber-600'}">
+                                ${rate}% ${rate >= 100 ? 'ĐỦ' : 'THIẾU ' + (g.totalQty - totalInv)}
+                            </span>
                         </td>
                     </tr>
                 `;
-            });
+            }).join('');
 
-            // Update KPI UI
-            document.getElementById('kpi-target').innerText = targetQty.toLocaleString();
-            document.getElementById('kpi-actual').innerText = actualQty.toLocaleString();
-            document.getElementById('kpi-rate').innerText = targetQty === 0 ? "0%" : Math.round((actualQty / targetQty) * 100) + "%";
-            document.getElementById('kpi-pkgs').innerText = totalPkgs.toFixed(1);
+            document.getElementById('kpi-target').innerText = tQty.toLocaleString();
+            document.getElementById('kpi-actual').innerText = tInv.toLocaleString();
+            document.getElementById('kpi-rate').innerText = tQty ? Math.round((tInv/tQty)*100) + "%" : "0%";
+            document.getElementById('kpi-pkgs').innerText = tPkgs.toFixed(1);
 
-            drawCharts(modelMap, contMap);
+            updateCharts(groupedData, cusPkgMap);
         }
 
-        // Hàm Đẩy dữ liệu lên Google Sheet (Ghi vào Cột R)
-        async function updateInventory(rowIndex) {
-            const inputEle = document.getElementById(`input-r-${rowIndex}`);
-            const btnEle = document.getElementById(`btn-${rowIndex}`);
-            const newVal = Number(inputEle.value);
+        function toggleEditMode() {
+            isEditMode = !isEditMode;
+            document.getElementById('btn-edit-toggle').innerHTML = isEditMode ? "❌ Hủy Sửa" : "✏️ Bật Chỉnh Sửa";
+            document.getElementById('btn-save-all').classList.toggle('hidden', !isEditMode);
+            renderUI();
+        }
 
-            btnEle.innerText = "⏳...";
-            btnEle.disabled = true;
+        function trackChange(idx, val) {
+            pendingUpdates[idx] = Number(val);
+        }
 
+        async function saveAllChanges() {
+            const btn = document.getElementById('btn-save-all');
+            const list = Object.keys(pendingUpdates).map(k => ({ rowIndex: Number(k), newValue: pendingUpdates[k] }));
+            if(list.length === 0) return toggleEditMode();
+
+            btn.innerText = "⏳ ĐANG LƯU...";
             try {
-                const res = await fetch(CLOUD_API, {
-                    method: 'POST',
-                    body: JSON.stringify({ rowIndex: rowIndex, newValue: newVal })
-                });
-                const result = await res.json();
-                
-                if(result.status === "success") {
-                    btnEle.innerText = "✅ Đã lưu";
-                    btnEle.classList.replace('bg-slate-800', 'bg-emerald-500');
-                    // Cập nhật lại data global để KPI tự nhảy
-                    const dataRow = globalData.find(d => d.rowIndex === rowIndex);
-                    if(dataRow) dataRow.invPending = newVal;
-                    setTimeout(() => applyFilters(), 1000); // Tự động render lại UI sau 1 giây
-                } else {
-                    btnEle.innerText = "❌ Lỗi";
-                }
-            } catch (err) {
-                console.error(err);
-                btnEle.innerText = "❌ Lỗi mạng";
-            }
-            setTimeout(() => {
-                btnEle.innerText = "Lưu KQ";
-                btnEle.disabled = false;
-                btnEle.classList.replace('bg-emerald-500', 'bg-slate-800');
-            }, 3000);
+                await fetch(API, { method: 'POST', body: JSON.stringify(list) });
+                alert("Đã lưu thành công " + list.length + " mục!");
+                pendingUpdates = {};
+                isEditMode = false;
+                fetchData();
+            } catch (e) { alert("Lỗi lưu dữ liệu!"); }
         }
 
-        function drawCharts(modelMap, contMap) {
-            Chart.defaults.font.family = "'Inter', sans-serif";
-            if(fulfillmentChartInst) fulfillmentChartInst.destroy();
-            if(contChartInst) contChartInst.destroy();
+        function updateCharts(data, pieMap) {
+            if(charts.bar) charts.bar.destroy();
+            if(charts.pie) charts.pie.destroy();
 
-            // Lấy Top 5 Model
-            const models = Object.keys(modelMap).slice(0, 5);
-            const targets = models.map(m => modelMap[m].target);
-            const actuals = models.map(m => modelMap[m].actual);
-
-            fulfillmentChartInst = new Chart(document.getElementById('fulfillmentChart'), {
+            const ctxBar = document.getElementById('barChart').getContext('2d');
+            charts.bar = new Chart(ctxBar, {
                 type: 'bar',
                 data: {
-                    labels: models,
+                    labels: data.map(d => d.model),
                     datasets: [
-                        { label: 'Yêu cầu', data: targets, backgroundColor: '#e2e8f0', borderRadius: 4 },
-                        { label: 'Tồn kho thực', data: actuals, backgroundColor: '#10b981', borderRadius: 4 }
+                        { label: 'Yêu cầu', data: data.map(d => d.totalQty), backgroundColor: '#f1f5f9' },
+                        { label: 'Hiện có', data: data.map(d => d.totalShelf + d.totalPending), backgroundColor: '#6366f1' }
                     ]
                 },
-                options: { responsive: true, maintainAspectRatio: false, scales: { x: { grid: {display: false} }, y: { beginAtZero: true, border: {dash: [4,4]} } } }
+                options: { 
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { tooltip: { callbacks: { label: (c) => `SL: ${c.raw} (${Math.round(c.raw/data[c.dataIndex].totalQty*100)}%)` } } }
+                }
             });
 
-            contChartInst = new Chart(document.getElementById('contChart'), {
+            const ctxPie = document.getElementById('pieChart').getContext('2d');
+            charts.pie = new Chart(ctxPie, {
                 type: 'doughnut',
                 data: {
-                    labels: Object.keys(contMap),
-                    datasets: [{ data: Object.values(contMap), backgroundColor: ['#4f46e5', '#3b82f6', '#0ea5e9', '#06b6d4', '#14b8a6'], borderWidth: 0 }]
+                    labels: Object.keys(pieMap),
+                    datasets: [{ data: Object.values(pieMap), backgroundColor: ['#6366f1', '#10b981', '#f59e0b', '#ef4444'] }]
                 },
-                options: { responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { legend: { position: 'right' } } }
+                options: { responsive: true, maintainAspectRatio: false, cutout: '70%' }
             });
         }
 
-        // Chạy lần đầu
         fetchData();
     </script>
 </body>
