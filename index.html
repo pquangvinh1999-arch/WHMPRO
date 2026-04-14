@@ -84,7 +84,7 @@
         </div>
         <div class="overflow-x-auto">
             <table class="w-full text-left text-sm border-collapse">
-               <thead class="bg-slate-50 text-slate-400 font-bold uppercase text-[10px] border-b">
+                <thead class="bg-slate-50 text-slate-400 font-bold uppercase text-[10px] border-b">
                     <tr>
                         <th class="px-6 py-4">Khách hàng</th>
                         <th class="px-6 py-4">Số Cont</th>
@@ -145,21 +145,20 @@
         }
 
        function processAndRender(data) {
-            // Gom nhóm theo Cont và Khách hàng
             const contMap = {};
 
             data.forEach(item => {
                 const model = item.desc.match(/\d{4}/)?.[0] || "Khác";
-                const contKey = `${item.cus}-${item.cont}`; // Khoá phân nhóm theo Cont
+                const contKey = `${item.cus}-${item.cont}`;
 
                 if (!contMap[contKey]) {
                     contMap[contKey] = {
                         cus: item.cus,
                         cont: item.cont,
                         totalQtyCont: 0,
-                        totalL: 0, // Tổng Trái cho riêng Cont này
-                        totalR: 0, // Tổng Phải cho riêng Cont này
-                        items: {}  // Chứa các mã hàng bên trong
+                        totalL: 0,
+                        totalR: 0,
+                        items: {}
                     };
                 }
 
@@ -174,7 +173,6 @@
                     };
                 }
 
-                // Cộng dồn cho từng Mã Hàng (Model)
                 const currentItem = contMap[contKey].items[model];
                 currentItem.totalQty += item.qty;
                 currentItem.totalShelf += item.invShelf;
@@ -185,7 +183,6 @@
                     val: item.invPending
                 });
 
-                // Cộng dồn Total cho Toàn bộ Cont
                 contMap[contKey].totalQtyCont += item.qty;
                 if (item.desc.includes("LHF")) {
                     contMap[contKey].totalL += item.qty;
@@ -194,7 +191,6 @@
                 }
             });
 
-            // Chuyển object thành array để render
             groupedData = Object.values(contMap).map(contGroup => {
                 contGroup.items = Object.values(contGroup.items);
                 return contGroup;
@@ -203,17 +199,31 @@
             renderUI();
         }
 
+        // HÀM MỚI: Tự động chia đều số lượng vào các ô L/R
+        function quickFill(totalVal, rowIndicesJson) {
+            const indices = JSON.parse(rowIndicesJson);
+            const valPerSide = Math.floor(totalVal / indices.length);
+            
+            indices.forEach(idx => {
+                // 1. Cập nhật vào đối tượng chờ lưu
+                trackChange(idx, valPerSide);
+                
+                // 2. Cập nhật hiển thị lên các ô input nhỏ ngay lập tức
+                const inputEl = document.querySelector(`input[data-row="${idx}"]`);
+                if(inputEl) inputEl.value = valPerSide;
+            });
+        }
+
         function renderUI() {
             const tbody = document.getElementById('main-table');
             let tQty = 0, tInv = 0, tPkgs = 0;
             const cusPkgMap = {};
-            const flatModelsForChart = []; // Mảng phẳng để nạp dữ liệu cho Chart không bị lỗi
+            const flatModelsForChart = [];
             let htmlContent = '';
 
             groupedData.forEach(group => {
                 let contTotalPkgs = 0;
 
-                // 1. In ra các mã hàng bên trong 1 Cont
                 group.items.forEach(g => {
                     const totalInv = g.totalShelf + g.totalPending;
                     const pkgs = (g.totalQty / 2) / (g.pcsPerPkg || 1);
@@ -226,6 +236,9 @@
                     cusPkgMap[group.cus] = (cusPkgMap[group.cus] || 0) + pkgs;
                     flatModelsForChart.push(g);
 
+                    // Chuẩn bị danh sách Index để dùng cho hàm Nhập Tổng
+                    const rowIndices = JSON.stringify(g.rows.map(r => r.rowIndex));
+
                     htmlContent += `
                         <tr class="hover:bg-slate-50 transition-all border-b border-slate-50">
                             <td class="px-6 py-4 font-bold text-slate-800">${group.cus}</td>
@@ -235,17 +248,24 @@
                             <td class="px-6 py-4 text-center text-slate-400">${g.pcsPerPkg}/pkg</td>
                             <td class="px-6 py-4 text-center font-bold text-purple-600">${pkgs.toFixed(1)}</td>
                             <td class="px-6 py-4 text-center font-bold text-indigo-500">${g.totalShelf}</td>
-                            <td class="px-6 py-4 text-center">
-                                <div class="flex flex-col gap-1">
-                                    ${g.rows.map(r => `
-                                        <div class="flex items-center gap-1 justify-center">
-                                            <span class="text-[9px] font-bold text-slate-400">${r.side}:</span>
-                                            <input type="number" value="${r.val}" 
-                                                ${!isEditMode ? 'readonly' : ''}
-                                                onchange="trackChange(${r.rowIndex}, this.value)"
-                                                class="w-14 text-center py-0.5 rounded border-none bg-slate-100 text-xs font-bold focus:ring-2 ring-emerald-500">
-                                        </div>
-                                    `).join('')}
+                            <td class="px-6 py-4 text-center min-w-[140px]">
+                                <div class="flex flex-col gap-2 items-center">
+                                    <input type="number" placeholder="Nhập tổng..." 
+                                        ${!isEditMode ? 'disabled' : ''}
+                                        onchange="quickFill(this.value, '${rowIndices.replace(/"/g, '&quot;')}')"
+                                        class="w-24 text-center py-1 rounded-md border-2 border-emerald-200 bg-white text-xs font-black text-emerald-700 placeholder:text-emerald-300 focus:ring-2 ring-emerald-500 outline-none mb-1">
+                                    
+                                    <div class="flex gap-2">
+                                        ${g.rows.map(r => `
+                                            <div class="flex flex-col items-center">
+                                                <span class="text-[8px] font-bold text-slate-400 mb-0.5">${r.side}</span>
+                                                <input type="number" value="${r.val}" data-row="${r.rowIndex}"
+                                                    ${!isEditMode ? 'readonly' : ''}
+                                                    onchange="trackChange(${r.rowIndex}, this.value)"
+                                                    class="w-12 text-center py-0.5 rounded border-none bg-slate-100 text-[10px] font-bold focus:ring-2 ring-emerald-500">
+                                            </div>
+                                        `).join('')}
+                                    </div>
                                 </div>
                             </td>
                             <td class="px-6 py-4 text-center">
@@ -257,7 +277,6 @@
                     `;
                 });
 
-                // 2. In ra dòng TỔNG (Subtotal) ngay bên dưới Cont đó
                 htmlContent += `
                     <tr class="bg-indigo-50/30 border-b-4 border-white">
                         <td colspan="3" class="px-6 py-3 text-right font-extrabold text-indigo-900 uppercase text-xs">
@@ -276,7 +295,6 @@
 
             tbody.innerHTML = htmlContent;
 
-            // Render lại KPI & Chart (Giữ nguyên gốc của anh)
             document.getElementById('kpi-target').innerText = tQty.toLocaleString();
             document.getElementById('kpi-actual').innerText = tInv.toLocaleString();
             document.getElementById('kpi-rate').innerText = tQty ? Math.round((tInv/tQty)*100) + "%" : "0%";
