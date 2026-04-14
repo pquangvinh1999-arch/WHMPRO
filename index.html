@@ -19,8 +19,8 @@
 
     <header class="mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-            <h1 class="text-2xl font-extrabold text-slate-900">WHM PRO ENTERPRISE By Vinh</h1>
-            <p class="text-slate-500 font-medium">Hệ thống phân tích dữ liệu kho & Điều phối hàng</p>
+            <h1 class="text-2xl font-extrabold text-slate-900">ENTERPRISE ANALYTICS REPORT By Vinh</h1>
+            <p class="text-slate-500 font-medium">Hệ thống phân tích dữ liệu tồn kho & Điều phối hàng</p>
         </div>
         <div class="flex flex-wrap gap-3">
             <div class="da-card px-4 py-2 flex items-center gap-2">
@@ -39,7 +39,7 @@
 
     <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
         <div class="da-card p-6 bg-gradient-to-br from-indigo-50 to-white border-l-4 border-indigo-500">
-            <p class="text-slate-500 text-[10px] font-bold uppercase tracking-wider">Yêu Cầu (Set)</p>
+            <p class="text-slate-500 text-[10px] font-bold uppercase tracking-wider">Yêu Cầu xuất</p>
             <h3 id="kpi-target" class="text-3xl font-black text-slate-800">0</h3>
         </div>
         <div class="da-card p-6 bg-gradient-to-br from-emerald-50 to-white border-l-4 border-emerald-500">
@@ -47,11 +47,11 @@
             <h3 id="kpi-actual" class="text-3xl font-black text-emerald-600">0</h3>
         </div>
         <div class="da-card p-6 bg-gradient-to-br from-amber-50 to-white border-l-4 border-amber-500">
-            <p class="text-slate-500 text-[10px] font-bold uppercase tracking-wider">Tỷ lệ Fulfillment</p>
+            <p class="text-slate-500 text-[10px] font-bold uppercase tracking-wider">Tỷ lệ đáp ứng</p>
             <h3 id="kpi-rate" class="text-3xl font-black text-amber-600">0%</h3>
         </div>
         <div class="da-card p-6 bg-gradient-to-br from-purple-50 to-white border-l-4 border-purple-500">
-            <p class="text-slate-500 text-[10px] font-bold uppercase tracking-wider">Tổng Kiện (Cont)</p>
+            <p class="text-slate-500 text-[10px] font-bold uppercase tracking-wider">Tổng Kiện xuất</p>
             <h3 id="kpi-pkgs" class="text-3xl font-black text-purple-600">0</h3>
         </div>
     </div>
@@ -60,7 +60,7 @@
         <div class="da-card p-6 lg:col-span-2">
             <div class="flex justify-between items-center mb-6">
                 <h3 class="font-extrabold text-slate-800">Phân tích tồn kho theo Feature</h3>
-                <input type="text" id="search-sku" onkeyup="applyFilters()" placeholder="Tìm model (VD: 8363)..." class="bg-slate-100 border-none px-4 py-2 rounded-lg text-sm w-48 focus:ring-2 ring-indigo-500">
+                <input type="text" id="search-sku" onkeyup="applyFilters()" placeholder="Tìm Feature ..." class="bg-slate-100 border-none px-4 py-2 rounded-lg text-sm w-48 focus:ring-2 ring-indigo-500">
             </div>
             <div class="h-64"><canvas id="barChart"></canvas></div>
         </div>
@@ -84,16 +84,17 @@
         </div>
         <div class="overflow-x-auto">
             <table class="w-full text-left text-sm border-collapse">
-                <thead class="bg-slate-50 text-slate-400 font-bold uppercase text-[10px] border-b">
+               <thead class="bg-slate-50 text-slate-400 font-bold uppercase text-[10px] border-b">
                     <tr>
-                        <th class="px-6 py-4">Khách hàng & Cont</th>
+                        <th class="px-6 py-4">Khách hàng</th>
+                        <th class="px-6 py-4">Số Cont</th>
                         <th class="px-6 py-4">Mã Feature (Set)</th>
                         <th class="px-6 py-4 text-center">Yêu Cầu</th>
                         <th class="px-6 py-4 text-center">Quy cách</th>
                         <th class="px-6 py-4 text-center">Số Kiện</th>
                         <th class="px-6 py-4 text-center text-indigo-600">Tồn Thành Phẩm</th>
                         <th class="px-6 py-4 text-center text-emerald-600">Tồn Sản Xuất</th>
-                        <th class="px-6 py-4 text-center">Trình trạng</th>
+                        <th class="px-6 py-4 text-center">Tình trạng</th>
                     </tr>
                 </thead>
                 <tbody id="main-table" class="divide-y divide-slate-100"></tbody>
@@ -143,23 +144,62 @@
             processAndRender(filtered);
         }
 
-        function processAndRender(data) {
-            // Logic Gom Nhóm L/R (Ảnh 3)
-            const map = {};
+       function processAndRender(data) {
+            // Gom nhóm theo Cont và Khách hàng
+            const contMap = {};
+
             data.forEach(item => {
                 const model = item.desc.match(/\d{4}/)?.[0] || "Khác";
-                const key = `${item.cus}-${item.cont}-${model}`;
-                
-                if(!map[key]) {
-                    map[key] = { ...item, model, totalQty: 0, totalShelf: 0, totalPending: 0, rows: [] };
+                const contKey = `${item.cus}-${item.cont}`; // Khoá phân nhóm theo Cont
+
+                if (!contMap[contKey]) {
+                    contMap[contKey] = {
+                        cus: item.cus,
+                        cont: item.cont,
+                        totalQtyCont: 0,
+                        totalL: 0, // Tổng Trái cho riêng Cont này
+                        totalR: 0, // Tổng Phải cho riêng Cont này
+                        items: {}  // Chứa các mã hàng bên trong
+                    };
                 }
-                map[key].totalQty += item.qty;
-                map[key].totalShelf += item.invShelf;
-                map[key].totalPending += item.invPending;
-                map[key].rows.push({ rowIndex: item.rowIndex, side: item.desc.includes("LHF") ? "L" : "R", val: item.invPending });
+
+                if (!contMap[contKey].items[model]) {
+                    contMap[contKey].items[model] = {
+                        model: model,
+                        totalQty: 0,
+                        totalShelf: 0,
+                        totalPending: 0,
+                        pcsPerPkg: item.pcsPerPkg || 1,
+                        rows: []
+                    };
+                }
+
+                // Cộng dồn cho từng Mã Hàng (Model)
+                const currentItem = contMap[contKey].items[model];
+                currentItem.totalQty += item.qty;
+                currentItem.totalShelf += item.invShelf;
+                currentItem.totalPending += item.invPending;
+                currentItem.rows.push({
+                    rowIndex: item.rowIndex,
+                    side: item.desc.includes("LHF") ? "L" : "R",
+                    val: item.invPending
+                });
+
+                // Cộng dồn Total cho Toàn bộ Cont
+                contMap[contKey].totalQtyCont += item.qty;
+                if (item.desc.includes("LHF")) {
+                    contMap[contKey].totalL += item.qty;
+                } else {
+                    contMap[contKey].totalR += item.qty;
+                }
             });
 
-            groupedData = Object.values(map);
+            // Chuyển object thành array để render
+            groupedData = Object.values(contMap).map(contGroup => {
+                contGroup.items = Object.values(contGroup.items);
+                return contGroup;
+            });
+
             renderUI();
         }
 
@@ -167,56 +207,82 @@
             const tbody = document.getElementById('main-table');
             let tQty = 0, tInv = 0, tPkgs = 0;
             const cusPkgMap = {};
+            const flatModelsForChart = []; // Mảng phẳng để nạp dữ liệu cho Chart không bị lỗi
+            let htmlContent = '';
 
-            tbody.innerHTML = groupedData.map(g => {
-                const totalInv = g.totalShelf + g.totalPending;
-                const pkgs = (g.totalQty / 2) / (g.pcsPerPkg || 1);
-                const rate = Math.round((totalInv / g.totalQty) * 100);
-                
-                tQty += g.totalQty;
-                tInv += totalInv;
-                tPkgs += pkgs;
-                cusPkgMap[g.cus] = (cusPkgMap[g.cus] || 0) + pkgs;
+            groupedData.forEach(group => {
+                let contTotalPkgs = 0;
 
-                return `
-                    <tr class="hover:bg-slate-50 transition-all">
-                        <td class="px-6 py-4">
-                            <div class="font-bold text-slate-800">${g.cus}</div>
-                            <div class="text-[10px] text-slate-400 font-bold uppercase">Cont: ${g.cont}</div>
+                // 1. In ra các mã hàng bên trong 1 Cont
+                group.items.forEach(g => {
+                    const totalInv = g.totalShelf + g.totalPending;
+                    const pkgs = (g.totalQty / 2) / (g.pcsPerPkg || 1);
+                    const rate = g.totalQty ? Math.round((totalInv / g.totalQty) * 100) : 0;
+
+                    tQty += g.totalQty;
+                    tInv += totalInv;
+                    tPkgs += pkgs;
+                    contTotalPkgs += pkgs;
+                    cusPkgMap[group.cus] = (cusPkgMap[group.cus] || 0) + pkgs;
+                    flatModelsForChart.push(g);
+
+                    htmlContent += `
+                        <tr class="hover:bg-slate-50 transition-all border-b border-slate-50">
+                            <td class="px-6 py-4 font-bold text-slate-800">${group.cus}</td>
+                            <td class="px-6 py-4 font-bold text-slate-500">${group.cont}</td>
+                            <td class="px-6 py-4 font-extrabold text-indigo-600">${g.model} <span class="text-slate-300 font-normal">Recliner Set</span></td>
+                            <td class="px-6 py-4 text-center font-bold">${g.totalQty}</td>
+                            <td class="px-6 py-4 text-center text-slate-400">${g.pcsPerPkg}/pkg</td>
+                            <td class="px-6 py-4 text-center font-bold text-purple-600">${pkgs.toFixed(1)}</td>
+                            <td class="px-6 py-4 text-center font-bold text-indigo-500">${g.totalShelf}</td>
+                            <td class="px-6 py-4 text-center">
+                                <div class="flex flex-col gap-1">
+                                    ${g.rows.map(r => `
+                                        <div class="flex items-center gap-1 justify-center">
+                                            <span class="text-[9px] font-bold text-slate-400">${r.side}:</span>
+                                            <input type="number" value="${r.val}" 
+                                                ${!isEditMode ? 'readonly' : ''}
+                                                onchange="trackChange(${r.rowIndex}, this.value)"
+                                                class="w-14 text-center py-0.5 rounded border-none bg-slate-100 text-xs font-bold focus:ring-2 ring-emerald-500">
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 text-center">
+                                <span class="px-2 py-1 rounded-full text-[10px] font-black ${rate >= 100 ? 'bg-emerald-100 text-emerald-600' : 'bg-amber-100 text-amber-600'}">
+                                    ${rate}% ${rate >= 100 ? 'ĐỦ' : 'THIẾU ' + (g.totalQty - totalInv)}
+                                </span>
+                            </td>
+                        </tr>
+                    `;
+                });
+
+                // 2. In ra dòng TỔNG (Subtotal) ngay bên dưới Cont đó
+                htmlContent += `
+                    <tr class="bg-indigo-50/30 border-b-4 border-white">
+                        <td colspan="3" class="px-6 py-3 text-right font-extrabold text-indigo-900 uppercase text-xs">
+                            TỔNG ${group.cont} (${group.cus}):
                         </td>
-                        <td class="px-6 py-4 font-extrabold text-indigo-600">${g.model} <span class="text-slate-300 font-normal">Recliner Set</span></td>
-                        <td class="px-6 py-4 text-center font-bold">${g.totalQty}</td>
-                        <td class="px-6 py-4 text-center text-slate-400">${g.pcsPerPkg}/pkg</td>
-                        <td class="px-6 py-4 text-center font-bold text-purple-600">${pkgs.toFixed(1)}</td>
-                        <td class="px-6 py-4 text-center font-bold text-indigo-500">${g.totalShelf}</td>
-                        <td class="px-6 py-4 text-center">
-                            <div class="flex flex-col gap-1">
-                                ${g.rows.map(r => `
-                                    <div class="flex items-center gap-1 justify-center">
-                                        <span class="text-[9px] font-bold text-slate-400">${r.side}:</span>
-                                        <input type="number" value="${r.val}" 
-                                            ${!isEditMode ? 'readonly' : ''}
-                                            onchange="trackChange(${r.rowIndex}, this.value)"
-                                            class="w-14 text-center py-0.5 rounded border-none bg-slate-100 text-xs font-bold focus:ring-2 ring-emerald-500">
-                                    </div>
-                                `).join('')}
-                            </div>
+                        <td class="px-6 py-3 text-center font-black text-indigo-900">
+                            ${group.totalQtyCont}
+                            <div class="text-[9px] text-slate-500 font-bold mt-0.5">L: ${group.totalL} | R: ${group.totalR}</div>
                         </td>
-                        <td class="px-6 py-4 text-center">
-                            <span class="px-2 py-1 rounded-full text-[10px] font-black ${rate >= 100 ? 'bg-emerald-100 text-emerald-600' : 'bg-amber-100 text-amber-600'}">
-                                ${rate}% ${rate >= 100 ? 'ĐỦ' : 'THIẾU ' + (g.totalQty - totalInv)}
-                            </span>
-                        </td>
+                        <td class="px-6 py-3"></td>
+                        <td class="px-6 py-3 text-center font-black text-purple-700">${contTotalPkgs.toFixed(1)}</td>
+                        <td colspan="3"></td>
                     </tr>
                 `;
-            }).join('');
+            });
 
+            tbody.innerHTML = htmlContent;
+
+            // Render lại KPI & Chart (Giữ nguyên gốc của anh)
             document.getElementById('kpi-target').innerText = tQty.toLocaleString();
             document.getElementById('kpi-actual').innerText = tInv.toLocaleString();
             document.getElementById('kpi-rate').innerText = tQty ? Math.round((tInv/tQty)*100) + "%" : "0%";
             document.getElementById('kpi-pkgs').innerText = tPkgs.toFixed(1);
 
-            updateCharts(groupedData, cusPkgMap);
+            updateCharts(flatModelsForChart, cusPkgMap);
         }
 
         function toggleEditMode() {
