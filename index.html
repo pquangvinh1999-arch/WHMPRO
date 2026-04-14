@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WHM PRO - ENTERPRISE ANALYTICS</title>
+    <title>WHM PRO - ENTERPRISE ANALYTICS V2</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
@@ -12,8 +12,6 @@
         body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f8fafc; }
         .da-card { background: white; border-radius: 16px; box-shadow: 0 4px 20px -2px rgba(0,0,0,0.05); border: 1px solid #f1f5f9; }
         .edit-mode input { border: 2px solid #10b981 !important; background: #ecfdf5 !important; }
-        .loading-shimmer { background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; }
-        @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
     </style>
 </head>
 <body class="min-h-screen p-4 md:p-6">
@@ -39,13 +37,13 @@
     </header>
 
     <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-        <div class="da-card p-6 bg-gradient-to-br from-indigo-50 to-white border-l-4 border-indigo-500">
+        <div class="da-card p-6 bg-gradient-to-br from-indigo-50 to-white border-l-4 border-indigo-600">
             <p class="text-slate-500 text-[10px] font-bold uppercase tracking-wider">Yêu Cầu xuất</p>
             <h3 id="kpi-target" class="text-3xl font-black text-slate-800">0</h3>
         </div>
-        <div class="da-card p-6 bg-gradient-to-br from-emerald-50 to-white border-l-4 border-emerald-500">
-            <p class="text-slate-500 text-[10px] font-bold uppercase tracking-wider">Tồn kho tổng</p>
-            <h3 id="kpi-actual" class="text-3xl font-black text-emerald-600">0</h3>
+        <div class="da-card p-6 bg-gradient-to-br from-slate-50 to-white border-l-4 border-slate-400">
+            <p class="text-slate-500 text-[10px] font-bold uppercase tracking-wider">Tồn kho thực tế</p>
+            <h3 id="kpi-actual" class="text-3xl font-black text-slate-600">0</h3>
         </div>
         <div class="da-card p-6 bg-gradient-to-br from-amber-50 to-white border-l-4 border-amber-500">
             <p class="text-slate-500 text-[10px] font-bold uppercase tracking-wider">Tỷ lệ đáp ứng</p>
@@ -60,13 +58,13 @@
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
         <div class="da-card p-6 lg:col-span-2">
             <div class="flex justify-between items-center mb-6">
-                <h3 class="font-extrabold text-slate-800">Phân tích tồn kho theo Feature</h3>
-                <input type="text" id="search-sku" onkeyup="applyFilters()" placeholder="Tìm Feature ..." class="bg-slate-100 border-none px-4 py-2 rounded-lg text-sm w-48 focus:ring-2 ring-indigo-500">
+                <h3 class="font-extrabold text-slate-800">So sánh Yêu cầu vs Thực tế (Kèm % Cảnh báo)</h3>
+                <input type="text" id="search-sku" onkeyup="applyFilters()" placeholder="Tìm mã hàng..." class="bg-slate-100 border-none px-4 py-2 rounded-lg text-sm w-48 focus:ring-2 ring-indigo-500">
             </div>
             <div class="h-64"><canvas id="barChart"></canvas></div>
         </div>
         <div class="da-card p-6">
-            <h3 class="font-extrabold text-slate-800 mb-6">Cơ cấu kiện hàng</h3>
+            <h3 class="font-extrabold text-slate-800 mb-6">Phân tích rủi ro tiến độ</h3>
             <div class="h-64"><canvas id="pieChart"></canvas></div>
         </div>
     </div>
@@ -79,7 +77,7 @@
                     ✏️ Chỉnh sửa số lượng
                 </button>
             </div>
-            <button id="btn-save-all" onclick="saveAllChanges()" class="hidden bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-1.5 rounded-lg text-xs font-black shadow-lg shadow-emerald-200">
+            <button id="btn-save-all" onclick="saveAllChanges()" class="hidden bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-1.5 rounded-lg text-xs font-black">
                 💾 Lưu tất cả
             </button>
         </div>
@@ -89,7 +87,7 @@
                     <tr>
                         <th class="px-6 py-4">Khách hàng</th>
                         <th class="px-6 py-4">Số Cont</th>
-                        <th class="px-6 py-4">Mã Feature (Set)</th>
+                        <th class="px-6 py-4">Feature</th>
                         <th class="px-6 py-4 text-center">Yêu Cầu</th>
                         <th class="px-6 py-4 text-center">Quy cách</th>
                         <th class="px-6 py-4 text-center">Số Kiện</th>
@@ -104,7 +102,6 @@
     </div>
 
     <script>
-        // Đăng ký plugin hiển thị label trên biểu đồ
         Chart.register(ChartDataLabels);
 
         const API = 'https://script.google.com/macros/s/AKfycbzSWdFRmBcrfBmQAMHJNrJNYeMhjKWZLJBHy7IgyNg8ckHsPlqHtcNDvk8W_W8kJzfSgQ/exec';
@@ -129,7 +126,6 @@
         function setupDropdowns() {
             const cus = [...new Set(rawData.map(d => d.cus))];
             const crd = [...new Set(rawData.map(d => d.crd))];
-            
             document.getElementById('filter-cus').innerHTML = '<option value="ALL">TẤT CẢ KH</option>' + cus.map(c => `<option value="${c}">${c}</option>`).join('');
             document.getElementById('filter-crd').innerHTML = '<option value="ALL">TẤT CẢ NGÀY</option>' + crd.map(c => `<option value="${c}">${c}</option>`).join('');
         }
@@ -138,252 +134,162 @@
             const s = document.getElementById('search-sku').value.toLowerCase();
             const c = document.getElementById('filter-cus').value;
             const d = document.getElementById('filter-crd').value;
-
             const filtered = rawData.filter(item => {
                 return (s === "" || item.desc.toLowerCase().includes(s)) &&
                        (c === "ALL" || item.cus === c) &&
                        (d === "ALL" || item.crd === d);
             });
-
             processAndRender(filtered);
         }
 
-       function processAndRender(data) {
+        function processAndRender(data) {
             const contMap = {};
-
             data.forEach(item => {
                 const model = item.desc.match(/\d{4}/)?.[0] || "Khác";
                 const contKey = `${item.cus}-${item.cont}`;
-
                 if (!contMap[contKey]) {
-                    contMap[contKey] = {
-                        cus: item.cus,
-                        cont: item.cont,
-                        totalQtyCont: 0,
-                        totalL: 0,
-                        totalR: 0,
-                        items: {}
-                    };
+                    contMap[contKey] = { cus: item.cus, cont: item.cont, totalQtyCont: 0, totalL: 0, totalR: 0, items: {} };
                 }
-
                 if (!contMap[contKey].items[model]) {
-                    contMap[contKey].items[model] = {
-                        model: model,
-                        totalQty: 0,
-                        totalShelf: 0,
-                        totalPending: 0,
-                        pcsPerPkg: item.pcsPerPkg || 1,
-                        rows: []
-                    };
+                    contMap[contKey].items[model] = { model: model, totalQty: 0, totalShelf: 0, totalPending: 0, pcsPerPkg: item.pcsPerPkg || 1, rows: [] };
                 }
-
                 const currentItem = contMap[contKey].items[model];
                 currentItem.totalQty += item.qty;
                 currentItem.totalShelf += item.invShelf;
                 currentItem.totalPending += item.invPending;
-                currentItem.rows.push({
-                    rowIndex: item.rowIndex,
-                    side: item.desc.includes("LHF") ? "L" : "R",
-                    val: item.invPending
-                });
-
+                currentItem.rows.push({ rowIndex: item.rowIndex, side: item.desc.includes("LHF") ? "L" : "R", val: item.invPending });
                 contMap[contKey].totalQtyCont += item.qty;
-                if (item.desc.includes("LHF")) {
-                    contMap[contKey].totalL += item.qty;
-                } else {
-                    contMap[contKey].totalR += item.qty;
-                }
+                if (item.desc.includes("LHF")) contMap[contKey].totalL += item.qty; else contMap[contKey].totalR += item.qty;
             });
-
             groupedData = Object.values(contMap).map(contGroup => {
                 contGroup.items = Object.values(contGroup.items);
                 return contGroup;
             });
-
             renderUI();
-        }
-
-        function quickFill(totalVal, rowIndicesJson) {
-            const indices = JSON.parse(rowIndicesJson);
-            const valPerSide = Math.floor(totalVal / indices.length);
-            
-            indices.forEach(idx => {
-                trackChange(idx, valPerSide);
-                const inputEl = document.querySelector(`input[data-row="${idx}"]`);
-                if(inputEl) inputEl.value = valPerSide;
-            });
         }
 
         function renderUI() {
             const tbody = document.getElementById('main-table');
             let tQty = 0, tInv = 0, tPkgs = 0;
-            const cusPkgMap = {};
+            const statusMap = { 'OnTrack': 0, 'AtRisk': 0 };
             const flatModelsForChart = [];
             let htmlContent = '';
 
             groupedData.forEach(group => {
                 let contTotalPkgs = 0;
-
                 group.items.forEach(g => {
                     const totalInv = g.totalShelf + g.totalPending;
                     const pkgs = (g.totalQty / 2) / (g.pcsPerPkg || 1);
                     const rate = g.totalQty ? Math.round((totalInv / g.totalQty) * 100) : 0;
-
+                    
                     tQty += g.totalQty;
                     tInv += totalInv;
                     tPkgs += pkgs;
                     contTotalPkgs += pkgs;
-                    cusPkgMap[group.cus] = (cusPkgMap[group.cus] || 0) + pkgs;
                     flatModelsForChart.push(g);
 
-                    const rowIndices = JSON.stringify(g.rows.map(r => r.rowIndex));
+                    if(rate >= 100) statusMap['OnTrack']++; else statusMap['AtRisk']++;
 
+                    const rowIndices = JSON.stringify(g.rows.map(r => r.rowIndex));
                     htmlContent += `
-                        <tr class="hover:bg-slate-50 transition-all border-b border-slate-50">
+                        <tr class="hover:bg-slate-50 transition-all border-b">
                             <td class="px-6 py-4 font-bold text-slate-800">${group.cus}</td>
                             <td class="px-6 py-4 font-bold text-slate-500">${group.cont}</td>
-                            <td class="px-6 py-4 font-extrabold text-indigo-600">${g.model} <span class="text-slate-300 font-normal">Recliner Set</span></td>
+                            <td class="px-6 py-4 font-extrabold text-indigo-600">${g.model}</td>
                             <td class="px-6 py-4 text-center font-bold">${g.totalQty}</td>
                             <td class="px-6 py-4 text-center text-slate-400">${g.pcsPerPkg}/pkg</td>
                             <td class="px-6 py-4 text-center font-bold text-purple-600">${pkgs.toFixed(1)}</td>
                             <td class="px-6 py-4 text-center font-bold text-indigo-500">${g.totalShelf}</td>
                             <td class="px-6 py-4 text-center min-w-[140px]">
-                                <div class="flex flex-col gap-2 items-center">
-                                    <input type="number" placeholder="Nhập tổng..." 
-                                        ${!isEditMode ? 'disabled' : ''}
-                                        onchange="quickFill(this.value, '${rowIndices.replace(/"/g, '&quot;')}')"
-                                        class="w-24 text-center py-1 rounded-md border-2 border-emerald-200 bg-white text-xs font-black text-emerald-700 placeholder:text-emerald-300 focus:ring-2 ring-emerald-500 outline-none mb-1">
-                                    
-                                    <div class="flex gap-2">
-                                        ${g.rows.map(r => `
-                                            <div class="flex flex-col items-center">
-                                                <span class="text-[8px] font-bold text-slate-400 mb-0.5">${r.side}</span>
-                                                <input type="number" value="${r.val}" data-row="${r.rowIndex}"
-                                                    ${!isEditMode ? 'readonly' : ''}
-                                                    onchange="trackChange(${r.rowIndex}, this.value)"
-                                                    class="w-12 text-center py-0.5 rounded border-none bg-slate-100 text-[10px] font-bold focus:ring-2 ring-emerald-500">
-                                            </div>
-                                        `).join('')}
+                                <div class="flex flex-col gap-1 items-center">
+                                    <div class="flex gap-1">
+                                        ${g.rows.map(r => `<input type="number" value="${r.val}" data-row="${r.rowIndex}" ${!isEditMode ? 'readonly' : ''} onchange="trackChange(${r.rowIndex}, this.value)" class="w-12 text-center py-0.5 rounded border-none bg-slate-100 text-[10px] font-bold focus:ring-2 ring-emerald-500">`).join('')}
                                     </div>
                                 </div>
                             </td>
                             <td class="px-6 py-4 text-center">
-                                <span class="px-2 py-1 rounded-full text-[10px] font-black ${rate >= 100 ? 'bg-emerald-100 text-emerald-600' : 'bg-amber-100 text-amber-600'}">
+                                <span class="px-2 py-1 rounded-full text-[10px] font-black ${rate >= 100 ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'}">
                                     ${rate}% ${rate >= 100 ? 'ĐỦ' : 'THIẾU ' + (g.totalQty - totalInv)}
                                 </span>
                             </td>
                         </tr>
                     `;
                 });
-
-                htmlContent += `
-                    <tr class="bg-indigo-50/30 border-b-4 border-white">
-                        <td colspan="3" class="px-6 py-3 text-right font-extrabold text-indigo-900 uppercase text-xs">
-                            TỔNG ${group.cont} (${group.cus}):
-                        </td>
-                        <td class="px-6 py-3 text-center font-black text-indigo-900">
-                            ${group.totalQtyCont}
-                            <div class="text-[9px] text-slate-500 font-bold mt-0.5">L: ${group.totalL} | R: ${group.totalR}</div>
-                        </td>
-                        <td class="px-6 py-3"></td>
-                        <td class="px-6 py-3 text-center font-black text-purple-700">${contTotalPkgs.toFixed(1)}</td>
-                        <td colspan="3"></td>
-                    </tr>
-                `;
             });
 
             tbody.innerHTML = htmlContent;
-
             document.getElementById('kpi-target').innerText = tQty.toLocaleString();
             document.getElementById('kpi-actual').innerText = tInv.toLocaleString();
             document.getElementById('kpi-rate').innerText = tQty ? Math.round((tInv/tQty)*100) + "%" : "0%";
             document.getElementById('kpi-pkgs').innerText = tPkgs.toFixed(1);
 
-            updateCharts(flatModelsForChart, cusPkgMap);
+            updateCharts(flatModelsForChart, statusMap);
         }
 
-        function toggleEditMode() {
-            isEditMode = !isEditMode;
-            document.getElementById('btn-edit-toggle').innerHTML = isEditMode ? "❌ Hủy Sửa" : "✏️ Bật Chỉnh Sửa";
-            document.getElementById('btn-save-all').classList.toggle('hidden', !isEditMode);
-            renderUI();
-        }
-
-        function trackChange(idx, val) {
-            pendingUpdates[idx] = Number(val);
-        }
-
-        async function saveAllChanges() {
-            const btn = document.getElementById('btn-save-all');
-            const list = Object.keys(pendingUpdates).map(k => ({ rowIndex: Number(k), newValue: pendingUpdates[k] }));
-            if(list.length === 0) return toggleEditMode();
-
-            btn.innerText = "⏳ ĐANG LƯU...";
-            try {
-                await fetch(API, { method: 'POST', body: JSON.stringify(list) });
-                alert("Đã lưu thành công " + list.length + " mục!");
-                pendingUpdates = {};
-                isEditMode = false;
-                fetchData();
-            } catch (e) { alert("Lỗi lưu dữ liệu!"); }
-        }
-
-        function updateCharts(data, pieMap) {
+        function updateCharts(data, statusMap) {
             if(charts.bar) charts.bar.destroy();
             if(charts.pie) charts.pie.destroy();
 
+            const labels = data.map(d => d.model);
+            const reqData = data.map(d => d.totalQty);
+            const actData = data.map(d => d.totalShelf + d.totalPending);
+
             const ctxBar = document.getElementById('barChart').getContext('2d');
             charts.bar = new Chart(ctxBar, {
-                type: 'bar',
                 data: {
-                    labels: data.map(d => d.model),
+                    labels: labels,
                     datasets: [
                         { 
-                            label: 'Yêu cầu', 
-                            data: data.map(d => d.totalQty), 
-                            backgroundColor: '#94a3b8', // Màu Slate Blue chuyên nghiệp hơn
-                            borderRadius: 6
+                            type: 'line',
+                            label: 'Xu hướng đáp ứng',
+                            data: actData,
+                            borderColor: 'rgba(99, 102, 241, 0.3)',
+                            borderWidth: 2,
+                            pointRadius: 3,
+                            fill: false,
+                            tension: 0.4
                         },
                         { 
-                            label: 'Hiện có', 
-                            data: data.map(d => d.totalShelf + d.totalPending), 
-                            backgroundColor: '#10b981', // Màu Emerald Green rực rỡ
-                            borderRadius: 6
+                            type: 'bar',
+                            label: 'Yêu cầu', 
+                            data: reqData, 
+                            backgroundColor: '#6366f1', // Màu Indigo (theo yêu cầu)
+                            borderRadius: 4,
+                            barThickness: 20
+                        },
+                        { 
+                            type: 'bar',
+                            label: 'Thực tế', 
+                            data: actData, 
+                            backgroundColor: '#94a3b8', // Màu Xám (theo yêu cầu)
+                            borderRadius: 4,
+                            barThickness: 20
                         }
                     ]
                 },
                 options: { 
-                    responsive: true, 
-                    maintainAspectRatio: false,
+                    responsive: true, maintainAspectRatio: false,
                     plugins: {
-                        // Cấu hình hiển thị % trực tiếp trên cột
                         datalabels: {
-                            anchor: 'end',
-                            align: 'top',
-                            color: '#475569',
-                            font: { weight: '800', size: 10 },
-                            formatter: (value, context) => {
-                                const req = context.chart.data.datasets[0].data[context.dataIndex];
-                                const act = context.chart.data.datasets[1].data[context.dataIndex];
-                                // Chỉ hiển thị % trên cột 'Hiện có' (dataset index 1)
-                                if (context.datasetIndex === 1 && req > 0) {
-                                    return Math.round((act / req) * 100) + '%';
-                                }
-                                return null;
+                            anchor: 'end', align: 'top',
+                            font: { weight: '800', size: 9 }, // Cỡ chữ nhỏ lại
+                            formatter: (val, ctx) => {
+                                if (ctx.datasetIndex !== 2) return null;
+                                const req = reqData[ctx.dataIndex];
+                                const rate = Math.round((val / req) * 100);
+                                return rate + '%';
+                            },
+                            color: (ctx) => {
+                                const val = actData[ctx.dataIndex];
+                                const req = reqData[ctx.dataIndex];
+                                return (val >= req) ? '#10b981' : '#ef4444'; // Xanh nếu đủ, Đỏ nếu thiếu
                             }
                         },
-                        legend: { labels: { font: { weight: '700' } } },
-                        tooltip: { 
-                            backgroundColor: '#1e293b',
-                            padding: 12,
-                            callbacks: { 
-                                label: (c) => ` SL: ${c.raw.toLocaleString()} (${Math.round(c.raw/data[c.dataIndex].totalQty*100)}%)` 
-                            } 
-                        }
+                        legend: { labels: { font: { size: 10, weight: '600' } } }
                     },
                     scales: {
-                        y: { beginAtZero: true, grid: { display: false } },
-                        x: { grid: { display: false } }
+                        y: { beginAtZero: true, grid: { display: false }, ticks: { font: { size: 10 } } },
+                        x: { grid: { display: false }, ticks: { font: { size: 10 } } }
                     }
                 }
             });
@@ -392,16 +298,44 @@
             charts.pie = new Chart(ctxPie, {
                 type: 'doughnut',
                 data: {
-                    labels: Object.keys(pieMap),
-                    datasets: [{ data: Object.values(pieMap), backgroundColor: ['#6366f1', '#10b981', '#f59e0b', '#ef4444'] }]
+                    labels: ['Đã đủ tiến độ', 'Cần tập trung (Thiếu)'],
+                    datasets: [{ 
+                        data: [statusMap.OnTrack, statusMap.AtRisk], 
+                        backgroundColor: ['#10b981', '#ef4444'],
+                        hoverOffset: 10
+                    }]
                 },
                 options: { 
-                    responsive: true, 
-                    maintainAspectRatio: false, 
-                    cutout: '70%',
-                    plugins: { datalabels: { display: false } } // Tắt label trên pie chart cho đỡ rối
+                    responsive: true, maintainAspectRatio: false, cutout: '70%',
+                    plugins: {
+                        legend: { position: 'bottom', labels: { font: { size: 11, weight: 'bold' } } },
+                        datalabels: {
+                            display: true,
+                            color: '#fff',
+                            font: { weight: 'bold', size: 12 },
+                            formatter: (val) => val > 0 ? val + ' mã' : ''
+                        }
+                    }
                 }
             });
+        }
+
+        function trackChange(idx, val) { pendingUpdates[idx] = Number(val); }
+        function toggleEditMode() {
+            isEditMode = !isEditMode;
+            document.getElementById('btn-edit-toggle').innerHTML = isEditMode ? "❌ Hủy Sửa" : "✏️ Chỉnh sửa số lượng";
+            document.getElementById('btn-save-all').classList.toggle('hidden', !isEditMode);
+            renderUI();
+        }
+        async function saveAllChanges() {
+            const btn = document.getElementById('btn-save-all');
+            const list = Object.keys(pendingUpdates).map(k => ({ rowIndex: Number(k), newValue: pendingUpdates[k] }));
+            if(list.length === 0) return toggleEditMode();
+            btn.innerText = "⏳...";
+            try {
+                await fetch(API, { method: 'POST', body: JSON.stringify(list) });
+                pendingUpdates = {}; isEditMode = false; fetchData();
+            } catch (e) { alert("Lỗi!"); }
         }
 
         fetchData();
