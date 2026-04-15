@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WHM PRO - ENTERPRISE ANALYTICS V2</title>
+    <title>WHM PRO - ENTERPRISE ANALYTICS V2.2</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
@@ -12,6 +12,7 @@
         body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f8fafc; }
         .da-card { background: white; border-radius: 16px; box-shadow: 0 4px 20px -2px rgba(0,0,0,0.05); border: 1px solid #f1f5f9; }
         .edit-mode input { border: 2px solid #10b981 !important; background: #ecfdf5 !important; }
+        .row-group-header { background-color: #f1f5f9; font-weight: 800; color: #1e293b; }
     </style>
 </head>
 <body class="min-h-screen p-4 md:p-6">
@@ -37,19 +38,19 @@
     </header>
 
     <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-        <div class="da-card p-6 bg-gradient-to-br from-indigo-50 to-white border-l-4 border-indigo-600">
+        <div class="da-card p-6 border-l-4 border-indigo-600">
             <p class="text-slate-500 text-[10px] font-bold uppercase tracking-wider">Yêu Cầu xuất</p>
             <h3 id="kpi-target" class="text-3xl font-black text-slate-800">0</h3>
         </div>
-        <div class="da-card p-6 bg-gradient-to-br from-slate-50 to-white border-l-4 border-slate-400">
+        <div class="da-card p-6 border-l-4 border-slate-400">
             <p class="text-slate-500 text-[10px] font-bold uppercase tracking-wider">Tồn kho thực tế</p>
             <h3 id="kpi-actual" class="text-3xl font-black text-slate-600">0</h3>
         </div>
-        <div class="da-card p-6 bg-gradient-to-br from-amber-50 to-white border-l-4 border-amber-500">
+        <div class="da-card p-6 border-l-4 border-amber-500">
             <p class="text-slate-500 text-[10px] font-bold uppercase tracking-wider">Tỷ lệ đáp ứng</p>
             <h3 id="kpi-rate" class="text-3xl font-black text-amber-600">0%</h3>
         </div>
-        <div class="da-card p-6 bg-gradient-to-br from-purple-50 to-white border-l-4 border-purple-500">
+        <div class="da-card p-6 border-l-4 border-purple-500">
             <p class="text-slate-500 text-[10px] font-bold uppercase tracking-wider">Tổng Kiện xuất</p>
             <h3 id="kpi-pkgs" class="text-3xl font-black text-purple-600">0</h3>
         </div>
@@ -58,14 +59,14 @@
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
         <div class="da-card p-6 lg:col-span-2">
             <div class="flex justify-between items-center mb-6">
-                <h3 class="font-extrabold text-slate-800">So sánh Yêu cầu vs Thực tế (Kèm % Cảnh báo)</h3>
+                <h3 class="font-extrabold text-slate-800">Phân tích chênh lệch & % Đáp ứng</h3>
                 <input type="text" id="search-sku" onkeyup="applyFilters()" placeholder="Tìm mã hàng..." class="bg-slate-100 border-none px-4 py-2 rounded-lg text-sm w-48 focus:ring-2 ring-indigo-500">
             </div>
-            <div class="h-64"><canvas id="barChart"></canvas></div>
+            <div class="h-80"><canvas id="barChart"></canvas></div>
         </div>
         <div class="da-card p-6">
             <h3 class="font-extrabold text-slate-800 mb-6">Phân tích rủi ro tiến độ</h3>
-            <div class="h-64"><canvas id="pieChart"></canvas></div>
+            <div class="h-80"><canvas id="pieChart"></canvas></div>
         </div>
     </div>
 
@@ -85,15 +86,15 @@
             <table class="w-full text-left text-sm border-collapse">
                 <thead class="bg-slate-50 text-slate-400 font-bold uppercase text-[10px] border-b">
                     <tr>
-                        <th class="px-6 py-4">Khách hàng</th>
-                        <th class="px-6 py-4">Số Cont</th>
+                        <th class="px-6 py-4">Khách hàng / Model</th>
+                        <th class="px-6 py-4">Số Cont / Chi tiết</th>
                         <th class="px-6 py-4">Feature</th>
                         <th class="px-6 py-4 text-center">Yêu Cầu</th>
                         <th class="px-6 py-4 text-center">Quy cách</th>
                         <th class="px-6 py-4 text-center">Số Kiện</th>
                         <th class="px-6 py-4 text-center text-indigo-600">Tồn Thành Phẩm</th>
                         <th class="px-6 py-4 text-center text-emerald-600">Tồn Sản Xuất</th>
-                        <th class="px-6 py-4 text-center">Tình trạng</th>
+                        <th class="px-6 py-4 text-center">Tỷ lệ %</th>
                     </tr>
                 </thead>
                 <tbody id="main-table" class="divide-y divide-slate-100"></tbody>
@@ -120,7 +121,7 @@
                 setupDropdowns();
                 applyFilters();
                 icon.classList.remove('animate-spin');
-            } catch (e) { alert("Lỗi kết nối API!"); }
+            } catch (e) { console.error(e); }
         }
 
         function setupDropdowns() {
@@ -147,23 +148,38 @@
             data.forEach(item => {
                 const model = item.desc.match(/\d{4}/)?.[0] || "Khác";
                 const contKey = `${item.cus}-${item.cont}`;
+                
                 if (!contMap[contKey]) {
-                    contMap[contKey] = { cus: item.cus, cont: item.cont, totalQtyCont: 0, totalL: 0, totalR: 0, items: {} };
+                    contMap[contKey] = { 
+                        cus: item.cus, cont: item.cont, 
+                        totalQtyCont: 0, totalShelfCont: 0, totalPendingCont: 0, totalPkgsCont: 0,
+                        items: {} 
+                    };
                 }
+                
                 if (!contMap[contKey].items[model]) {
-                    contMap[contKey].items[model] = { model: model, totalQty: 0, totalShelf: 0, totalPending: 0, pcsPerPkg: item.pcsPerPkg || 1, rows: [] };
+                    contMap[contKey].items[model] = { 
+                        model: model, totalQty: 0, totalShelf: 0, totalPending: 0, 
+                        pcsPerPkg: item.pcsPerPkg || 1, rows: [] 
+                    };
                 }
+                
                 const currentItem = contMap[contKey].items[model];
                 currentItem.totalQty += item.qty;
                 currentItem.totalShelf += item.invShelf;
                 currentItem.totalPending += item.invPending;
                 currentItem.rows.push({ rowIndex: item.rowIndex, side: item.desc.includes("LHF") ? "L" : "R", val: item.invPending });
+                
                 contMap[contKey].totalQtyCont += item.qty;
-                if (item.desc.includes("LHF")) contMap[contKey].totalL += item.qty; else contMap[contKey].totalR += item.qty;
+                contMap[contKey].totalShelfCont += item.invShelf;
+                contMap[contKey].totalPendingCont += item.invPending;
             });
-            groupedData = Object.values(contMap).map(contGroup => {
-                contGroup.items = Object.values(contGroup.items);
-                return contGroup;
+
+            groupedData = Object.values(contMap).map(group => {
+                group.items = Object.values(group.items);
+                // Tính tổng kiện của Cont
+                group.totalPkgsCont = group.items.reduce((sum, g) => sum + ((g.totalQty / 2) / (g.pcsPerPkg || 1)), 0);
+                return group;
             });
             renderUI();
         }
@@ -176,44 +192,57 @@
             let htmlContent = '';
 
             groupedData.forEach(group => {
-                let contTotalPkgs = 0;
+                // Thêm hàng Header cho Container
+                htmlContent += `
+                    <tr class="row-group-header border-b-2 border-slate-200">
+                        <td class="px-6 py-3 bg-slate-100 text-indigo-700">CONT: ${group.cont}</td>
+                        <td class="px-6 py-3 bg-slate-100">${group.cus}</td>
+                        <td class="px-6 py-3 bg-slate-100 text-xs italic text-slate-500 text-right">TỔNG CỘNG CONT:</td>
+                        <td class="px-6 py-3 bg-slate-100 text-center text-slate-900">${group.totalQtyCont.toLocaleString()}</td>
+                        <td class="px-6 py-3 bg-slate-100"></td>
+                        <td class="px-6 py-3 bg-slate-100 text-center text-purple-700">${group.totalPkgsCont.toFixed(1)}</td>
+                        <td class="px-6 py-3 bg-slate-100 text-center text-indigo-700">${group.totalShelfCont.toLocaleString()}</td>
+                        <td class="px-6 py-3 bg-slate-100 text-center text-emerald-700">${group.totalPendingCont.toLocaleString()}</td>
+                        <td class="px-6 py-3 bg-slate-100 text-center">
+                            <span class="font-black">${Math.round(((group.totalShelfCont + group.totalPendingCont)/group.totalQtyCont)*100)}%</span>
+                        </td>
+                    </tr>
+                `;
+
                 group.items.forEach(g => {
                     const totalInv = g.totalShelf + g.totalPending;
                     const pkgs = (g.totalQty / 2) / (g.pcsPerPkg || 1);
                     const rate = g.totalQty ? Math.round((totalInv / g.totalQty) * 100) : 0;
                     
-                    tQty += g.totalQty;
-                    tInv += totalInv;
-                    tPkgs += pkgs;
-                    contTotalPkgs += pkgs;
+                    tQty += g.totalQty; tInv += totalInv; tPkgs += pkgs;
                     flatModelsForChart.push(g);
-
                     if(rate >= 100) statusMap['OnTrack']++; else statusMap['AtRisk']++;
 
+                    // Chuỗi JSON chứa danh sách rowIndex để cập nhật hàng loạt
                     const rowIndices = JSON.stringify(g.rows.map(r => r.rowIndex));
+
                     htmlContent += `
-                        <tr class="hover:bg-slate-50 transition-all border-b">
-                            <td class="px-6 py-4 font-bold text-slate-800">${group.cus}</td>
-                            <td class="px-6 py-4 font-bold text-slate-500">${group.cont}</td>
-                            <td class="px-6 py-4 font-extrabold text-indigo-600">${g.model}</td>
+                        <tr class="hover:bg-slate-50 transition-all border-b border-slate-100">
+                            <td class="px-6 py-4 font-extrabold text-indigo-600 pl-10">${g.model}</td>
+                            <td class="px-6 py-4 font-medium text-slate-400 text-xs">${group.cont}</td>
+                            <td class="px-6 py-4 text-xs text-slate-400 italic">Hàng tồn SX</td>
                             <td class="px-6 py-4 text-center font-bold">${g.totalQty}</td>
-                            <td class="px-6 py-4 text-center text-slate-400">${g.pcsPerPkg}/pkg</td>
+                            <td class="px-6 py-4 text-center text-slate-400">${g.pcsPerPkg}</td>
                             <td class="px-6 py-4 text-center font-bold text-purple-600">${pkgs.toFixed(1)}</td>
                             <td class="px-6 py-4 text-center font-bold text-indigo-500">${g.totalShelf}</td>
-                            <td class="px-6 py-4 text-center min-w-[140px]">
-                                <div class="flex flex-col gap-1 items-center">
-                                    <div class="flex gap-1">
-                                        ${g.rows.map(r => `<input type="number" value="${r.val}" data-row="${r.rowIndex}" ${!isEditMode ? 'readonly' : ''} onchange="trackChange(${r.rowIndex}, this.value)" class="w-12 text-center py-0.5 rounded border-none bg-slate-100 text-[10px] font-bold focus:ring-2 ring-emerald-500">`).join('')}
-                                    </div>
-                                </div>
+                            <td class="px-6 py-4 text-center">
+                                <input type="number" 
+                                    value="${g.totalPending}" 
+                                    ${!isEditMode ? 'readonly' : ''} 
+                                    onchange="handleBulkUpdate('${rowIndices}', this.value)"
+                                    class="w-24 text-center py-1 rounded-lg border-2 border-transparent bg-slate-100 font-black text-emerald-600 focus:ring-2 ring-emerald-500 outline-none transition-all">
                             </td>
                             <td class="px-6 py-4 text-center">
                                 <span class="px-2 py-1 rounded-full text-[10px] font-black ${rate >= 100 ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'}">
-                                    ${rate}% ${rate >= 100 ? 'ĐỦ' : 'THIẾU ' + (g.totalQty - totalInv)}
+                                    ${rate}%
                                 </span>
                             </td>
-                        </tr>
-                    `;
+                        </tr>`;
                 });
             });
 
@@ -222,8 +251,16 @@
             document.getElementById('kpi-actual').innerText = tInv.toLocaleString();
             document.getElementById('kpi-rate').innerText = tQty ? Math.round((tInv/tQty)*100) + "%" : "0%";
             document.getElementById('kpi-pkgs').innerText = tPkgs.toFixed(1);
-
             updateCharts(flatModelsForChart, statusMap);
+        }
+
+        // Hàm xử lý khi anh nhập vào 1 ô số lượng gộp
+        function handleBulkUpdate(jsonIndices, totalValue) {
+            const indices = JSON.parse(jsonIndices);
+            const valPerLine = Number(totalValue) / indices.length; // Chia đều cho LHF và RHF
+            indices.forEach(idx => {
+                pendingUpdates[idx] = valPerLine;
+            });
         }
 
         function updateCharts(data, statusMap) {
@@ -239,57 +276,24 @@
                 data: {
                     labels: labels,
                     datasets: [
-                        { 
-                            type: 'line',
-                            label: 'Xu hướng đáp ứng',
-                            data: actData,
-                            borderColor: 'rgba(99, 102, 241, 0.3)',
-                            borderWidth: 2,
-                            pointRadius: 3,
-                            fill: false,
-                            tension: 0.4
-                        },
-                        { 
-                            type: 'bar',
-                            label: 'Yêu cầu', 
-                            data: reqData, 
-                            backgroundColor: '#6366f1', // Màu Indigo (theo yêu cầu)
-                            borderRadius: 4,
-                            barThickness: 10
-                        },
-                        { 
-                            type: 'bar',
-                            label: 'Thực tế', 
-                            data: actData, 
-                            backgroundColor: '#94a3b8', // Màu Xám (theo yêu cầu)
-                            borderRadius: 4,
-                            barThickness: 10
-                        }
+                        { type: 'line', label: 'Trend', data: actData, borderColor: 'rgba(99, 102, 241, 0.2)', borderWidth: 1.5, pointRadius: 2, fill: false, tension: 0.4 },
+                        { type: 'bar', label: 'Yêu cầu', data: reqData, backgroundColor: '#6366f1', borderRadius: 2, barThickness: 5 },
+                        { type: 'bar', label: 'Thực tế', data: actData, backgroundColor: '#94a3b8', borderRadius: 2, barThickness: 5 }
                     ]
                 },
                 options: { 
                     responsive: true, maintainAspectRatio: false,
                     plugins: {
                         datalabels: {
-                            anchor: 'end', align: 'top',
-                            font: { weight: '800', size: 9 }, // Cỡ chữ nhỏ lại
-                            formatter: (val, ctx) => {
-                                if (ctx.datasetIndex !== 2) return null;
-                                const req = reqData[ctx.dataIndex];
-                                const rate = Math.round((val / req) * 100);
-                                return rate + '%';
-                            },
-                            color: (ctx) => {
-                                const val = actData[ctx.dataIndex];
-                                const req = reqData[ctx.dataIndex];
-                                return (val >= req) ? '#10b981' : '#ef4444'; // Xanh nếu đủ, Đỏ nếu thiếu
-                            }
+                            anchor: 'end', align: 'top', offset: 5, font: { weight: '800', size: 8 },
+                            formatter: (val, ctx) => ctx.datasetIndex === 2 ? Math.round((val / reqData[ctx.dataIndex]) * 100) + '%' : null,
+                            color: (ctx) => (actData[ctx.dataIndex] / reqData[ctx.dataIndex]) >= 1 ? '#10b981' : '#ef4444'
                         },
-                        legend: { labels: { font: { size: 10, weight: '600' } } }
+                        legend: { position: 'top', labels: { boxWidth: 12, font: { size: 10, weight: '600' } } }
                     },
                     scales: {
-                        y: { beginAtZero: true, grid: { display: false }, ticks: { font: { size: 10 } } },
-                        x: { grid: { display: false }, ticks: { font: { size: 10 } } }
+                        y: { beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { font: { size: 9 } } },
+                        x: { grid: { display: false }, ticks: { font: { size: 9, weight: 'bold' } } }
                     }
                 }
             });
@@ -298,44 +302,35 @@
             charts.pie = new Chart(ctxPie, {
                 type: 'doughnut',
                 data: {
-                    labels: ['Đã đủ tiến độ', 'Cần tập trung (Thiếu)'],
-                    datasets: [{ 
-                        data: [statusMap.OnTrack, statusMap.AtRisk], 
-                        backgroundColor: ['#10b981', '#ef4444'],
-                        hoverOffset: 10
-                    }]
+                    labels: ['Đạt tiến độ', 'Chậm tiến độ'],
+                    datasets: [{ data: [statusMap.OnTrack, statusMap.AtRisk], backgroundColor: ['#10b981', '#ef4444'], borderWidth: 0 }]
                 },
                 options: { 
-                    responsive: true, maintainAspectRatio: false, cutout: '70%',
+                    responsive: true, maintainAspectRatio: false, cutout: '75%',
                     plugins: {
-                        legend: { position: 'bottom', labels: { font: { size: 11, weight: 'bold' } } },
-                        datalabels: {
-                            display: true,
-                            color: '#fff',
-                            font: { weight: 'bold', size: 12 },
-                            formatter: (val) => val > 0 ? val + ' mã' : ''
-                        }
+                        legend: { position: 'bottom', labels: { usePointStyle: true, font: { size: 10, weight: 'bold' } } },
+                        datalabels: { display: true, color: '#fff', font: { weight: 'bold', size: 11 }, formatter: (val) => val > 0 ? val + ' mã' : '' }
                     }
                 }
             });
         }
 
-        function trackChange(idx, val) { pendingUpdates[idx] = Number(val); }
         function toggleEditMode() {
             isEditMode = !isEditMode;
             document.getElementById('btn-edit-toggle').innerHTML = isEditMode ? "❌ Hủy Sửa" : "✏️ Chỉnh sửa số lượng";
             document.getElementById('btn-save-all').classList.toggle('hidden', !isEditMode);
             renderUI();
         }
+
         async function saveAllChanges() {
             const btn = document.getElementById('btn-save-all');
             const list = Object.keys(pendingUpdates).map(k => ({ rowIndex: Number(k), newValue: pendingUpdates[k] }));
             if(list.length === 0) return toggleEditMode();
-            btn.innerText = "⏳...";
+            btn.innerText = "⏳ Đang lưu...";
             try {
                 await fetch(API, { method: 'POST', body: JSON.stringify(list) });
                 pendingUpdates = {}; isEditMode = false; fetchData();
-            } catch (e) { alert("Lỗi!"); }
+            } catch (e) { alert("Lỗi khi lưu dữ liệu!"); }
         }
 
         fetchData();
